@@ -5,12 +5,13 @@ from torch.utils.tensorboard import SummaryWriter
 import datetime
 
 from load_data import load_db
-from nets import CCP
+from nets import CCP, NCP
 from runner import train, test
 
-# TODO Build another net besides CCP, a second simple one
-# TODO Get dataloading working with Fashion MNIST, CIFAR10
-# TODO Build a function that looks at training & testing and builds a confusion matrix of results (maybe torch has a prebuild thing), also allows me to display samples that are in each bucket.
+# TODO Build a function that looks at training & testing and builds a confusion matrix of results (maybe torch has a prebuild thing)
+# TODO Display samples that are in each bucket. Display samples whenever I want, grid or individual photos
+# TODO Look into coding T-SNE
+# TODO Look up other ways to understand what is going on inside the neural network...
 
 
 if __name__ == '__main__':
@@ -19,6 +20,7 @@ if __name__ == '__main__':
     lr = 0.001
     epochs = 5
     batch_size = 64
+    n_degree = 4
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     # Load Data
@@ -33,7 +35,8 @@ if __name__ == '__main__':
     channels_in = sample_shape[0]
 
     # create the model.
-    net = CCP(16, image_size=image_size, n_classes=n_classes)
+    net = CCP(16, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
+    # net = NCP(16, 8, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree, skip=True)
     net.apply(net.weights_init)
 
     # # define the optimizer.
