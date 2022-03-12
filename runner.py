@@ -1,8 +1,9 @@
 import sys
 import torch
+from plots import get_confusion_matrix
 
 
-def train(net, train_loader, optimizer, criterion, epoch, device, writer):
+def train(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix):
     """ Perform single epoch of the training."""
     net.train()
     running_loss, correct, total = 0, 0, 0
@@ -33,10 +34,13 @@ def train(net, train_loader, optimizer, criterion, epoch, device, writer):
         writer.add_scalar("Loss/Train", train_loss, epoch)
         writer.add_scalar("Accuracy/Train", acc, epoch)
         writer.flush()
+    if confusion_matrix:
+        writer.add_figure("Confusion/Train", get_confusion_matrix(train_loader, net, device), epoch)
+        writer.flush()
     return running_loss
 
 
-def test(net, test_loader, criterion, epoch, device, writer):
+def test(net, test_loader, criterion, epoch, device, writer, confusion_matrix):
     """ Perform testing, i.e. run net on test_loader data
         and return the accuracy. """
     net.eval()
@@ -63,4 +67,15 @@ def test(net, test_loader, criterion, epoch, device, writer):
     writer.add_scalar("Accuracy/Test", acc, epoch)
     writer.flush()
 
+    if confusion_matrix:
+        writer.add_figure("Confusion/Test", get_confusion_matrix(test_loader, net, device), epoch)
+        writer.flush()
+
     print(f'Epoch {epoch} (Validation - Loss: {test_loss:.03f} & Accuracy: {acc:.03f}')
+
+
+def load_checkpoint(net, optimizer, checkpoint_path):
+    checkpoint = torch.load(checkpoint_path)
+    net.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    print(f"Checkpoint Loaded - {checkpoint_path}")
