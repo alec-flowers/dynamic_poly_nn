@@ -1,26 +1,34 @@
 import torch
+import os
 from torch import optim
 from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 import datetime
+from utils import MODEL_PATH, path_exist
 
 from load_data import load_db
 from nets import CCP, NCP
-from runner import train, test
+from runner import train, test, load_checkpoint
 
-# TODO Build a function that looks at training & testing and builds a confusion matrix of results (maybe torch has a prebuild thing)
 # TODO Display samples that are in each bucket. Display samples whenever I want, grid or individual photos
 # TODO Look into coding T-SNE
 # TODO Look up other ways to understand what is going on inside the neural network...
 
 
 if __name__ == '__main__':
+    # Parameters
+    save = False
     DATASETS = ['MNIST', "FashionMNIST", "CIFAR10"]
     chosen_dataset = DATASETS[2]
+    checkpoint = None # str(MODEL_PATH) + f"/{chosen_dataset}/20220311-170934.ckpt"
+    confusion_matrix = True
+
+
+    # Hyperparameters
     lr = 0.001
     epochs = 5
     batch_size = 64
-    n_degree = 4
+    n_degree = 3
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     # Load Data
@@ -35,15 +43,18 @@ if __name__ == '__main__':
     channels_in = sample_shape[0]
 
     # create the model.
-    net = CCP(16, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
-    # net = NCP(16, 8, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree, skip=True)
+    # net = CCP(16, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
+    net = NCP(16, 8, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree, skip=True)
     net.apply(net.weights_init)
 
-    # # define the optimizer.
+    # `define the optimizer.
     opt = optim.SGD(net.parameters(), lr=lr)
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     print(f"Running on: {device}")
+
+    if checkpoint:
+        load_checkpoint(net, opt, checkpoint)
 
     writer = SummaryWriter(f'runs/{chosen_dataset}/' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
@@ -54,5 +65,9 @@ if __name__ == '__main__':
     criterion = torch.nn.CrossEntropyLoss().to(device)
 
     for epoch in range(epochs):
-        train(net, train_loader, opt, criterion, epoch, device, writer)
-        test(net, valid_loader, criterion, epoch, device, writer)
+        train(net, train_loader, opt, criterion, epoch, device, writer, confusion_matrix)
+        test(net, valid_loader, criterion, epoch, device, writer, confusion_matrix)
+    if save:
+        path = str(MODEL_PATH) + f"/{chosen_dataset}"
+        path_exist(path)
+        torch.save({'model_state_dict': net.state_dict(), 'optimizer_state_dict': opt.state_dict()}, path+"/"+datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+".ckpt")
