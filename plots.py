@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import seaborn as sns
 import sys
+import math
 
 
 def get_confusion_matrix(loader, net, device):
@@ -37,4 +38,38 @@ def plot_confusion_matrix(targets, predicted, labels):
     plt.xticks(tick_marks, labels, rotation=90)
     plt.yticks(tick_marks, labels, rotation=0)
     plt.tight_layout()
+
+    # For tensorboard output
     return fig.get_figure()
+
+
+def prepare_images(dataset, indices):
+    # mapping so can give an number and will give back description
+    mapping = {v: k for k, v in dataset.class_to_idx.items()}
+    img_list = []
+    label_list = []
+    for i in indices:
+        img, label = dataset[i]
+        # put into proper form for plt.imshow
+        img_list.append(img.permute((1, 2 ,0)).squeeze())
+        label_list.append(mapping[label])
+    return img_list, label_list
+
+
+def plot_image_grid(images, title: str = "", subplot_title: list =[]):
+    # images must be ready to be plotted by plt, that means (M, N, Channels)
+    n_images = len(images)
+    plt.figure(figsize=(10, 10))
+    for i in range(n_images):
+        image = images[i]
+        if subplot_title:
+            plt.subplot(math.ceil(np.sqrt(n_images)), math.ceil(np.sqrt(n_images)), i + 1, ).set_title(f"{subplot_title[i]}")
+        else:
+            plt.subplot(math.ceil(np.sqrt(n_images)), math.ceil(np.sqrt(n_images)), i + 1,)
+        plt.xticks([])
+        plt.yticks([])
+        plt.grid(False)
+        plt.imshow(image, cmap='gray')
+    plt.tight_layout()
+    plt.suptitle(title, size=16)
+    plt.show()

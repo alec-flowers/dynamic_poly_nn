@@ -10,10 +10,9 @@ from load_data import load_db
 from nets import CCP, NCP
 from runner import train, test, load_checkpoint
 
-# TODO Display samples that are in each bucket. Display samples whenever I want, grid or individual photos
+# TODO move into Google Colab and make sure works with GPU
 # TODO Look into coding T-SNE
-# TODO Look up other ways to understand what is going on inside the neural network...
-
+# TODO Think of and run experiments
 
 if __name__ == '__main__':
     # Parameters
