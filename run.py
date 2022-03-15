@@ -12,7 +12,7 @@ from runner import train, test, load_checkpoint, train_profile
 
 # TODO Look into coding T-SNE
 # TODO Think of and run experiments
-# TODO confusion matrix for testing can be done in test, rather than re-ran seperately...
+# TODO Look into FFCV api for dataloading FAST - https://docs.ffcv.io/basics.html
 
 
 if __name__ == '__main__':
@@ -21,8 +21,9 @@ if __name__ == '__main__':
     DATASETS = ['MNIST', "FashionMNIST", "CIFAR10"]
     chosen_dataset = DATASETS[1]
     checkpoint = None # str(MODEL_PATH) + f"/{chosen_dataset}/20220311-170934.ckpt"
-    confusion_matrix = True
+    confusion_matrix = False
     subset = True
+    num_workers = 4
 
 
     # Hyperparameters
@@ -33,7 +34,13 @@ if __name__ == '__main__':
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     # Load Data
-    train_loader, valid_loader, test_loader = load_db(chosen_dataset, transform, batch_size=batch_size, subset=subset)
+    train_loader, valid_loader, test_loader = load_db(
+        chosen_dataset,
+        transform,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        subset=subset
+    )
 
     print(f"Dataset: {type(train_loader.dataset)}")
     sample_shape = train_loader.dataset[0][0].shape
@@ -44,8 +51,8 @@ if __name__ == '__main__':
     channels_in = sample_shape[0]
 
     # create the model.
-    # net = CCP(16, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
-    net = NCP(16, 8, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree, skip=True)
+    net = CCP(16, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
+    # net = NCP(16, 8, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree, skip=True)
     net.apply(net.weights_init)
     print(f"Degree: {n_degree} Num Parameters: {count_parameters(net)}")
 
@@ -68,7 +75,7 @@ if __name__ == '__main__':
 
     for epoch in range(epochs):
         train_profile(net, train_loader, opt, criterion, epoch, device, writer, confusion_matrix)
-        test(net, valid_loader, criterion, epoch, device, writer, confusion_matrix)
+        _, _ = test(net, valid_loader, criterion, epoch, device, writer)
     if save:
         path = str(MODEL_PATH) + f"/{chosen_dataset}"
         path_exist(path)

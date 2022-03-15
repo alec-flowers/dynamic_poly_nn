@@ -2,7 +2,7 @@ import sys
 import torch
 from torch.profiler import tensorboard_trace_handler
 
-from plots import get_confusion_matrix
+from plots import get_confusion_matrix, plot_confusion_matrix
 
 
 def train(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix, profiler=None):
@@ -13,7 +13,8 @@ def train(net, train_loader, optimizer, criterion, epoch, device, writer, confus
         img = data_dict[0]
         label = data_dict[1]
         inputs, label = img.to(device), label.to(device)
-        optimizer.zero_grad()
+        # efficiency increase
+        optimizer.zero_grad(set_to_none=True)
         pred = net(inputs)
         loss = criterion(pred, label)
         assert not torch.isnan(loss), 'NaN loss.'
@@ -67,6 +68,8 @@ def train_profile(net, train_loader, optimizer, criterion, epoch, device, writer
 def test(net, test_loader, criterion, epoch, device, writer, confusion_matrix):
     """ Perform testing, i.e. run net on test_loader data
         and return the accuracy. """
+    y_pred = []
+    y_true = []
     net.eval()
     correct, total, running_loss = 0, 0, 0
     for (idx, data) in enumerate(test_loader):
@@ -84,6 +87,12 @@ def test(net, test_loader, criterion, epoch, device, writer, confusion_matrix):
         _, predicted = pred.max(1)
         correct += predicted.eq(label).sum().item()
 
+        y_pred.extend(predicted)
+        y_true.extend(label)
+
+        y_pred = torch.tensor(y_pred, device='cpu').numpy()
+        y_true = torch.tensor(y_true, device='cpu').numpy()
+
     test_loss = running_loss / total
     acc = float(correct) / total
 
@@ -92,10 +101,15 @@ def test(net, test_loader, criterion, epoch, device, writer, confusion_matrix):
     # writer.flush()
 
     if confusion_matrix:
-        writer.add_figure("Confusion/Test", get_confusion_matrix(test_loader, net, device), epoch)
+        writer.add_figure(
+            "Confusion/Test",
+            plot_confusion_matrix(y_pred, y_true, test_loader.dataset.class_to_idx.keys()),
+            epoch
+        )
         # writer.flush()
 
     print(f'Epoch {epoch} (Validation - Loss: {test_loss:.03f} & Accuracy: {acc:.03f}')
+    return y_pred, y_true
 
 
 def load_checkpoint(net, optimizer, checkpoint_path):
