@@ -22,7 +22,7 @@ def train(net, train_loader, optimizer, criterion, epoch, device, writer, confus
         running_loss += loss.item()
 
         _, predicted = torch.max(pred.data, 1)
-        correct += predicted.eq(label).cpu().sum()
+        correct += predicted.eq(label).sum()
 
         train_loss = running_loss/total
         acc = float(correct)/total
@@ -31,12 +31,12 @@ def train(net, train_loader, optimizer, criterion, epoch, device, writer, confus
                   'Loss: {:.04f}, Acc: {:.06f}')
             print(m2.format(epoch, idx, len(train_loader), float(train_loss), acc))
 
-        writer.add_scalar("Loss/Train", train_loss, epoch)
-        writer.add_scalar("Accuracy/Train", acc, epoch)
-        writer.flush()
+    writer.add_scalar("Loss/Train", train_loss, epoch)
+    writer.add_scalar("Accuracy/Train", acc, epoch)
+    # writer.flush()
     if confusion_matrix:
         writer.add_figure("Confusion/Train", get_confusion_matrix(train_loader, net, device), epoch)
-        writer.flush()
+        # writer.flush()
     return running_loss
 
 
@@ -65,11 +65,11 @@ def test(net, test_loader, criterion, epoch, device, writer, confusion_matrix):
 
     writer.add_scalar("Loss/Test", test_loss, epoch)
     writer.add_scalar("Accuracy/Test", acc, epoch)
-    writer.flush()
+    # writer.flush()
 
     if confusion_matrix:
         writer.add_figure("Confusion/Test", get_confusion_matrix(test_loader, net, device), epoch)
-        writer.flush()
+        # writer.flush()
 
     print(f'Epoch {epoch} (Validation - Loss: {test_loss:.03f} & Accuracy: {acc:.03f}')
 
