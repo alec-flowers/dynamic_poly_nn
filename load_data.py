@@ -15,6 +15,7 @@ def load_db(name, transform, root='data', batch_size=64, shuffle=True, valid_rat
             instance_num = 1000
         else:
             instance_num = len(trainset)
+        print(f"Num Samples in train + validation: {instance_num}")
         indices = list(range(instance_num))
         split_pt = int(instance_num * valid_ratio)
         train_idx, valid_idx = indices[split_pt:], indices[:split_pt]
