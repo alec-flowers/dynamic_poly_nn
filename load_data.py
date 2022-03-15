@@ -1,9 +1,9 @@
 import torch
 from torchvision import transforms, datasets
-from torch.utils.data import SubsetRandomSampler, DataLoader
+from torch.utils.data import SubsetRandomSampler, DataLoader, Subset
 
 
-def load_db(name, transform, root='data', batch_size=64, shuffle=True, valid_ratio=0.2, seed=0):
+def load_db(name, transform, root='data', batch_size=64, shuffle=True, valid_ratio=0.2, seed=0, subset=False):
     trainset = getattr(datasets, name)(root=root, train=True, download=True, transform=transform)
     testset = getattr(datasets, name)(root=root, train=False, download=True, transform=transform)
     g = torch.Generator()
@@ -11,7 +11,10 @@ def load_db(name, transform, root='data', batch_size=64, shuffle=True, valid_rat
 
     if valid_ratio > 0:
         # # divide the training set into validation and training set.
-        instance_num = len(trainset)
+        if subset:
+            instance_num = 1000
+        else:
+            instance_num = len(trainset)
         indices = list(range(instance_num))
         split_pt = int(instance_num * valid_ratio)
         train_idx, valid_idx = indices[split_pt:], indices[:split_pt]

@@ -21,6 +21,7 @@ if __name__ == '__main__':
     chosen_dataset = DATASETS[2]
     checkpoint = None # str(MODEL_PATH) + f"/{chosen_dataset}/20220311-170934.ckpt"
     confusion_matrix = True
+    subset = True
 
 
     # Hyperparameters
@@ -31,7 +32,7 @@ if __name__ == '__main__':
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     # Load Data
-    train_loader, valid_loader, test_loader = load_db(chosen_dataset, transform, batch_size=batch_size)
+    train_loader, valid_loader, test_loader = load_db(chosen_dataset, transform, batch_size=batch_size, subset=subset)
 
     print(f"Dataset: {type(train_loader.dataset)}")
     sample_shape = train_loader.dataset[0][0].shape
