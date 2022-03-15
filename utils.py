@@ -15,3 +15,15 @@ assert (REPO_ROOT.exists())
 
 MODEL_PATH = (REPO_ROOT / "models").absolute().resolve()
 path_exist(MODEL_PATH)
+
+
+def count_parameters(model):
+    """
+    Count parameters in a model
+    """
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad: continue
+        param = parameter.numel()
+        total_params += param
+    return total_params
