@@ -22,6 +22,10 @@ def get_confusion_matrix(loader, net, device):
         _, predicted = pred.max(1)
         y_pred.extend(predicted)
         y_true.extend(label)
+
+    # Bring everything to cpu for numpy to work
+    y_pred = torch.tensor(y_pred, device='cpu').numpy()
+    y_true = torch.tensor(y_true, device='cpu').numpy()
     print("Calculating Confusion Matrix")
     return plot_confusion_matrix(y_pred, y_true, loader.dataset.class_to_idx.keys())
 
