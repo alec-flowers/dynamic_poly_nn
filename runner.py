@@ -1,9 +1,11 @@
 import sys
 import torch
+from torch.profiler import tensorboard_trace_handler
+
 from plots import get_confusion_matrix
 
 
-def train(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix):
+def train(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix, profiler=None):
     """ Perform single epoch of the training."""
     net.train()
     running_loss, correct, total, train_loss, acc = 0, 0, 0, 0, 0
@@ -17,6 +19,8 @@ def train(net, train_loader, optimizer, criterion, epoch, device, writer, confus
         assert not torch.isnan(loss), 'NaN loss.'
         loss.backward()
         optimizer.step()
+        if profiler:
+            profiler.step()
 
         total += label.size(0)
         running_loss += loss.item()
@@ -37,7 +41,27 @@ def train(net, train_loader, optimizer, criterion, epoch, device, writer, confus
     if confusion_matrix:
         writer.add_figure("Confusion/Train", get_confusion_matrix(train_loader, net, device), epoch)
         # writer.flush()
-    return running_loss
+
+
+def train_profile(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix):
+    with torch.profiler.profile(
+            schedule=torch.profiler.schedule(
+                wait=2,
+                warmup=2,
+                active=6,
+                repeat=1),
+            on_trace_ready=tensorboard_trace_handler(writer.log_dir),
+            with_stack=True
+    ) as profiler:
+        train(net=net,
+              train_loader=train_loader,
+              optimizer=optimizer,
+              criterion=criterion,
+              epoch=epoch,
+              device=device,
+              writer=writer,
+              confusion_matrix=confusion_matrix,
+              profiler=profiler)
 
 
 def test(net, test_loader, criterion, epoch, device, writer, confusion_matrix):
