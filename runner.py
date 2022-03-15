@@ -6,7 +6,7 @@ from plots import get_confusion_matrix
 def train(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix):
     """ Perform single epoch of the training."""
     net.train()
-    running_loss, correct, total = 0, 0, 0
+    running_loss, correct, total, train_loss, acc = 0, 0, 0, 0, 0
     for idx, data_dict in enumerate(train_loader):
         img = data_dict[0]
         label = data_dict[1]
