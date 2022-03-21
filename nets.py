@@ -12,14 +12,15 @@ class CCP(nn.Module):
         self.n_classes = n_classes
         self.n_degree = n_degree
         for i in range(1, self.n_degree + 1):
-            setattr(self, 'U{}'.format(i), nn.Linear(self.total_image_size, self.hidden_size, bias=bias))
+            setattr(self, f'U{i}', nn.Linear(self.total_image_size, self.hidden_size, bias=bias))
+            setattr(self, f'Id_U{i}', nn.Identity())
         self.C = nn.Linear(self.hidden_size, self.n_classes, bias=True)
 
     def forward(self, z):
         h = z.view(-1, self.total_image_size)
         out = self.U1(h)
         for i in range(2, self.n_degree + 1):
-            out = getattr(self, 'U{}'.format(i))(h) * out + out
+            out = getattr(self, f"Id_U{i}")(getattr(self, f'U{i}')(h) * out + out)
         out = self.C(out)
         return out
 
