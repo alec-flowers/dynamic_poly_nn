@@ -1,5 +1,6 @@
 import pathlib
 import os
+import torch
 
 
 def path_exist(path):
@@ -27,3 +28,11 @@ def count_parameters(model):
         param = parameter.numel()
         total_params += param
     return total_params
+
+
+def load_checkpoint(net, checkpoint_path, optimizer=None):
+    checkpoint = torch.load(checkpoint_path)
+    net.load_state_dict(checkpoint['model_state_dict'])
+    if optimizer:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    print(f"Checkpoint Loaded - {checkpoint_path}")
