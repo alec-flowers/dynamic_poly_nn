@@ -49,6 +49,15 @@ def only_use_certain_class(dataset, ind_to_keep):
 def load_dataset(name, transform, root='data', apply_manipulation=None, **kwargs):
     trainset = getattr(datasets, name)(root=root, train=True, download=True, transform=transform)
     testset = getattr(datasets, name)(root=root, train=False, download=True, transform=transform)
+
+    if apply_manipulation:
+        trainset = apply_manipulation(trainset, **kwargs)
+        testset = apply_manipulation(testset, **kwargs)
+
+    return trainset, testset
+
+
+def split_and_load_dataloader(trainset, testset, batch_size=64, num_workers=0,shuffle=True, valid_ratio=0.2, seed=0, subset=False):
     g = torch.Generator()
     g.manual_seed(seed)
 
@@ -63,12 +72,15 @@ def load_dataset(name, transform, root='data', apply_manipulation=None, **kwargs
         split_pt = int(instance_num * valid_ratio)
         train_idx, valid_idx = indices[split_pt:], indices[:split_pt]
         train_sampler, valid_sampler = SubsetRandomSampler(train_idx), SubsetRandomSampler(valid_idx)
-        train_loader = DataLoader(trainset, batch_size=batch_size, sampler=train_sampler, generator=g, num_workers=num_workers)
-        valid_loader = DataLoader(trainset, batch_size=batch_size, sampler=valid_sampler, generator=g, num_workers=num_workers)
+
+        # Note without persistent_workers=True, cost to restart new threads to do loading is brutal.
+        train_loader = DataLoader(trainset, batch_size=batch_size, sampler=train_sampler, generator=g, num_workers=num_workers, persistent_workers=True)
+        valid_loader = DataLoader(trainset, batch_size=batch_size, sampler=valid_sampler, generator=g, num_workers=num_workers, persistent_workers=True)
     else:
-        train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=shuffle, generator=g, num_workers=num_workers)
+        train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=shuffle, generator=g, num_workers=num_workers, persistent_workers=True)
         valid_loader = None
 
     test_loader = DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
 
     return train_loader, valid_loader, test_loader
+
