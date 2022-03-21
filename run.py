@@ -93,4 +93,19 @@ if __name__ == '__main__':
     if save:
         path = str(MODEL_PATH) + f"/{chosen_dataset}"
         path_exist(path)
-        torch.save({'model_state_dict': net.state_dict(), 'optimizer_state_dict': opt.state_dict()}, path+"/"+datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+".ckpt")
+        torch.save(
+            {
+                'model_state_dict': net.state_dict(),
+                'optimizer_state_dict': opt.state_dict(),
+                'chosen_dataset': chosen_dataset,
+                'subset': subset,
+                "num_workers": num_workers,
+                "apply_manipulation": apply_manipulation,
+                "ind_to_keep": ind_to_keep,
+                "binary_class": binary_class,
+                "lr": lr,
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "n_degree": n_degree,
+                "transform": transform,
+             }, path + "/" + CUSTOM_SAVE + "_" + path_time + ".ckpt")
