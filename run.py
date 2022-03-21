@@ -16,7 +16,7 @@ from runner import train, test, train_profile
 
 
 if __name__ == '__main__':
-    CUSTOM_SAVE = "binary_6"
+    CUSTOM_SAVE = ""
     # Parameters
     save = True
     DATASETS = ['MNIST', "FashionMNIST", "CIFAR10"]
@@ -25,16 +25,17 @@ if __name__ == '__main__':
     confusion_matrix = False
     subset = False
     num_workers = 4
-    apply_manipulation = OneClassDataset
+    apply_manipulation = None
     ind_to_keep = None
-    binary_class = 6
+    binary_class = None
 
 
     # Hyperparameters
     lr = 0.001
-    epochs = 10
+    epochs = 20
     batch_size = 64
     n_degree = 16
+    hidden_size = 16
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     # Load Data in particular way
@@ -66,7 +67,7 @@ if __name__ == '__main__':
     channels_in = sample_shape[0]
 
     # create the model.
-    net = CCP(16, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
+    net = CCP(hidden_size=hidden_size, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
     # net = NCP(16, 8, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree, skip=True)
     net.apply(net.weights_init)
     print(f"Degree: {n_degree} Num Parameters: {count_parameters(net)}")
@@ -112,4 +113,5 @@ if __name__ == '__main__':
                 "batch_size": batch_size,
                 "n_degree": n_degree,
                 "transform": transform,
-             }, path + "/" + CUSTOM_SAVE + "_" + path_time + ".ckpt")
+                "hidden_size": hidden_size,
+             }, path + "/" + CUSTOM_SAVE + path_time + ".ckpt")

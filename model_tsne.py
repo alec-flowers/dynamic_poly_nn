@@ -15,48 +15,38 @@ from plots import plot_per_class_accuracy, plot_tsne, plot_confusion_matrix
 import collections
 import matplotlib.pyplot as plt
 
-# TODO Save a dict that loads all these things for me so I just have to pick the path and all the correct stuff gets loaded from the Run...
 
 if __name__ == '__main__':
-    # Parameters
-    save = True
     DATASETS = ['MNIST', "FashionMNIST", "CIFAR10"]
     chosen_dataset = DATASETS[1]
-    #confusion_matrix = False
-    subset = False
-    num_workers = 4
-
-    # Hyperparameters
-    #lr = 0.001
-    #epochs = 10
-    hidden_size = 16
-    batch_size = 64
     n_degree = 16
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    apply_manipulation = OneClassDataset
-    # cls_subset = [0, 2, 4, 6]
-    binary_class = 6
+    file = "20220321-165247.ckpt"
 
-    checkpoint = str(MODEL_PATH) + f"/{chosen_dataset}/{n_degree}/binary_6_20220321-134034.ckpt"#20220318-154212.ckpt"
+    # which layers to register hooks
+    REGISTER = ["Id_U4", "Id_U8", "Id_U12", f"Id_U{n_degree}"]
 
+    CHECK_PATH = str(MODEL_PATH) + f"/{chosen_dataset}/{n_degree}/{file}"
+
+    checkpoint = torch.load(CHECK_PATH)
 
     # Load Data in particular way
     train_dataset, test_dataset = load_dataset(
         chosen_dataset,
-        transform,
-        apply_manipulation=apply_manipulation,
-        binary_class=binary_class
+        checkpoint["transform"],
+        apply_manipulation=checkpoint["apply_manipulation"],
+        binary_class=checkpoint["binary_class"],  #TODO this will likely throw error
+        ind_to_keep=checkpoint["ind_to_keep"]
     )
     # Initialize dataloaders
     train_loader, valid_loader, test_loader = split_and_load_dataloader(
         train_dataset,
         test_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
+        batch_size=checkpoint["batch_size"],
+        num_workers=checkpoint["num_workers"],
         shuffle=True,
         valid_ratio=0.2,
         seed=0,
-        subset=subset
+        subset=checkpoint["subset"]
     )
 
     print(f"Dataset: {type(train_loader.dataset)}")
@@ -75,11 +65,10 @@ if __name__ == '__main__':
         return hook
 
     # load model
-    net = CCP(hidden_size, image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
-    load_checkpoint(net, checkpoint)
+    net = CCP(checkpoint["hidden_size"], image_size=image_size, n_classes=n_classes, channels_in=channels_in, n_degree=n_degree)
+    net.load_state_dict(checkpoint['model_state_dict'])
 
     # add hooks
-    REGISTER = ["U1", "Id_U2", "Id_U4",f"Id_U{n_degree}"]
     for lay in REGISTER:
         getattr(net, lay).register_forward_hook(get_activation(lay))
 
