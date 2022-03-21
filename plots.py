@@ -47,6 +47,28 @@ def plot_confusion_matrix(targets, predicted, labels):
     return fig.get_figure()
 
 
+def per_class_accuracy(targets, predicted):
+    conf_mat = confusion_matrix(targets, predicted)
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)[:, np.newaxis]
+    avg_acc = accuracy_score(targets, predicted)
+    return conf_mat.diagonal(), avg_acc
+
+
+def plot_per_class_accuracy(targets, predicted, labels, title=None):
+    per_class, avg_acc = per_class_accuracy(targets, predicted)
+    fix, ax = plt.subplots(figsize=(12, 6))
+    p1 = ax.bar(labels, per_class, align='center', alpha=0.5)
+    ax.set_ylabel('Test Accuracy')
+    plt.ylim([0, 1])
+    if title:
+        ax.set_title(f"Per Class Accuracy {title[0]} degree: {title[1]} Layer: {title[2]}")
+    ax.bar_label(p1, fmt='%.3f', fontsize=11)
+    plt.axhline(y=avg_acc, color='r', linestyle='-')
+    plt.text(1/len(per_class)-1, avg_acc, f"{avg_acc:.3f}", rotation=0, color='r')
+    plt.show()
+    print(f"Test Set Average Accuracy: {avg_acc}")
+
+
 def prepare_images(dataset, indices):
     # mapping so can give an number and will give back description
     mapping = {v: k for k, v in dataset.class_to_idx.items()}
