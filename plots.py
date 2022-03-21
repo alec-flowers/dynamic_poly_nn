@@ -1,10 +1,13 @@
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import seaborn as sns
 import sys
 import math
+import time
 
 
 def get_confusion_matrix(loader, net, device):
@@ -98,4 +101,36 @@ def plot_image_grid(images, title: str = "", subplot_title: list =[]):
         plt.imshow(image, cmap='gray')
     plt.tight_layout()
     plt.suptitle(title, size=16)
+    plt.show()
+
+
+def apply_pca(data, n_components):
+    pca = PCA(n_components=n_components)
+    pca_result = pca.fit_transform(data)
+    print('Cumulative explained variation for 50 principal components: {}'.format(
+        np.sum(pca.explained_variance_ratio_)))
+
+    return pca_result
+
+
+def apply_tsne(data):
+    time_start = time.time()
+    tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
+    tsne_results = tsne.fit_transform(data)
+    print('t-SNE done! Time elapsed: {} seconds'.format(time.time() - time_start))
+
+    return tsne_results
+
+
+def plot_tsne(x, y, true_classes, n_colors, title=None):
+    plt.figure(figsize=(16, 10))
+    sns.scatterplot(
+        x=x, y=y,
+        hue=true_classes,
+        palette=sns.color_palette("hls", n_colors=n_colors),
+        legend="full",
+        alpha=0.3
+    )
+    if title:
+        plt.title(f"TSNE Plot for {title[0]} degree: {title[1]} Layer: {title[2]}")
     plt.show()
