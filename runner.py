@@ -65,11 +65,9 @@ def train_profile(net, train_loader, optimizer, criterion, epoch, device, writer
               profiler=profiler)
 
 
-def test(net, test_loader, criterion, epoch, device, writer, confusion_matrix):
+def test(net, test_loader, criterion, epoch, device, writer):
     """ Perform testing, i.e. run net on test_loader data
         and return the accuracy. """
-    y_pred = []
-    y_true = []
     net.eval()
     correct, total, running_loss = 0, 0, 0
     for (idx, data) in enumerate(test_loader):
@@ -87,33 +85,34 @@ def test(net, test_loader, criterion, epoch, device, writer, confusion_matrix):
         _, predicted = pred.max(1)
         correct += predicted.eq(label).sum().item()
 
-        y_pred.extend(predicted)
-        y_true.extend(label)
-
-        y_pred = torch.tensor(y_pred, device='cpu').numpy()
-        y_true = torch.tensor(y_true, device='cpu').numpy()
-
     test_loss = running_loss / total
     acc = float(correct) / total
 
     writer.add_scalar("Loss/Test", test_loss, epoch)
     writer.add_scalar("Accuracy/Test", acc, epoch)
-    # writer.flush()
-
-    if confusion_matrix:
-        writer.add_figure(
-            "Confusion/Test",
-            plot_confusion_matrix(y_pred, y_true, test_loader.dataset.class_to_idx.keys()),
-            epoch
-        )
-        # writer.flush()
 
     print(f'Epoch {epoch} (Validation - Loss: {test_loss:.03f} & Accuracy: {acc:.03f}')
+
+
+def test_to_analyze(net, loader, device):
+    y_pred = []
+    y_true = []
+    net.eval()
+    for (idx, data) in enumerate(loader):
+        sys.stdout.write('\r [%d/%d]' % (idx + 1, len(loader)))
+        sys.stdout.flush()
+        img = data[0].to(device)
+        label = data[1].to(device)
+        with torch.no_grad():
+            pred = net(img)
+
+        _, predicted = pred.max(1)
+        y_pred.extend(predicted)
+        y_true.extend(label)
+
+    y_pred = torch.tensor(y_pred, device='cpu').numpy()
+    y_true = torch.tensor(y_true, device='cpu').numpy()
+
     return y_pred, y_true
 
 
-def load_checkpoint(net, optimizer, checkpoint_path):
-    checkpoint = torch.load(checkpoint_path)
-    net.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    print(f"Checkpoint Loaded - {checkpoint_path}")
