@@ -4,25 +4,26 @@ from torch import optim
 from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 import datetime
-from utils import MODEL_PATH, path_exist, count_parameters
+from utils import MODEL_PATH, path_exist, count_parameters, load_checkpoint
 
-from load_data import load_db
+from load_data import load_dataset, only_use_certain_class, split_and_load_dataloader, OneClassDataset
 from nets import CCP, NCP
-from runner import train, test, load_checkpoint, train_profile
+from runner import train, test, train_profile
 
+# TODO Run polynomial tests on simple datasets (layers of circles moving outward)
 # TODO Look into coding T-SNE
-# TODO Think of and run experiments
 # TODO Look into FFCV api for dataloading FAST - https://docs.ffcv.io/basics.html
 
 
 if __name__ == '__main__':
+    CUSTOM_SAVE = "binary_6"
     # Parameters
-    save = False
+    save = True
     DATASETS = ['MNIST', "FashionMNIST", "CIFAR10"]
     chosen_dataset = DATASETS[1]
-    checkpoint = None # str(MODEL_PATH) + f"/{chosen_dataset}/20220311-170934.ckpt"
+    checkpoint = None #str(MODEL_PATH) + f"/{chosen_dataset}/20220311-170934.ckpt"
     confusion_matrix = False
-    subset = True
+    subset = False
     num_workers = 4
     apply_manipulation = OneClassDataset
     ind_to_keep = None
@@ -31,9 +32,9 @@ if __name__ == '__main__':
 
     # Hyperparameters
     lr = 0.001
-    epochs = 5
+    epochs = 10
     batch_size = 64
-    n_degree = 3
+    n_degree = 16
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     # Load Data in particular way
@@ -77,9 +78,10 @@ if __name__ == '__main__':
     print(f"Running on: {device}")
 
     if checkpoint:
-        load_checkpoint(net, opt, checkpoint)
+        load_checkpoint(net, checkpoint, opt)
 
-    writer = SummaryWriter(f'runs/{chosen_dataset}/' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    path_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    writer = SummaryWriter(f'runs/{chosen_dataset}/{n_degree}/' + path_time)
 
     if device == 'cuda':
         print(f"Num Devices: {torch.cuda.device_count()}")
@@ -88,10 +90,12 @@ if __name__ == '__main__':
     criterion = torch.nn.CrossEntropyLoss().to(device)
 
     for epoch in range(epochs):
-        train_profile(net, train_loader, opt, criterion, epoch, device, writer, confusion_matrix)
-        _, _ = test(net, valid_loader, criterion, epoch, device, writer)
+        train(net, train_loader, opt, criterion, epoch, device, writer, confusion_matrix)
+        if epoch % 2 == 0:
+            test(net, valid_loader, criterion, epoch, device, writer)
     if save:
-        path = str(MODEL_PATH) + f"/{chosen_dataset}"
+        print("Saving Model")
+        path = str(MODEL_PATH) + f"/{chosen_dataset}/{n_degree}"
         path_exist(path)
         torch.save(
             {
