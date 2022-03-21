@@ -24,6 +24,9 @@ if __name__ == '__main__':
     confusion_matrix = False
     subset = True
     num_workers = 4
+    apply_manipulation = OneClassDataset
+    ind_to_keep = None
+    binary_class = 6
 
 
     # Hyperparameters
@@ -33,14 +36,25 @@ if __name__ == '__main__':
     n_degree = 3
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
-    # Load Data
-    train_loader, valid_loader, test_loader = load_db(
+    # Load Data in particular way
+    train_dataset, test_dataset = load_dataset(
         chosen_dataset,
         transform,
+        apply_manipulation=apply_manipulation,
+        binary_class=binary_class
+    )
+    # Initialize dataloaders
+    train_loader, valid_loader, test_loader = split_and_load_dataloader(
+        train_dataset,
+        test_dataset,
         batch_size=batch_size,
         num_workers=num_workers,
+        shuffle=True,
+        valid_ratio=0.2,
+        seed=0,
         subset=subset
     )
+
 
     print(f"Dataset: {type(train_loader.dataset)}")
     sample_shape = train_loader.dataset[0][0].shape
