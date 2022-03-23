@@ -7,7 +7,7 @@ from torch.utils.data import SubsetRandomSampler, DataLoader, Subset, Dataset
 
 
 class OneClassDataset(Dataset):
-    def __init__(self, dataset, binary_class):
+    def __init__(self, dataset, binary_class, **kwargs):
         super(Dataset, self).__init__()
         self.binary_class = binary_class
         self.dataset = dataset
@@ -27,7 +27,7 @@ class OneClassDataset(Dataset):
         return {_class: i for i, _class in enumerate(self.classes)}
 
 
-def only_use_certain_class(dataset, ind_to_keep):
+def only_use_certain_class(dataset, ind_to_keep, **kwargs):
 
     # get indices for subset of classes to keep
     idx = torch.zeros(len(dataset), dtype=torch.bool)
