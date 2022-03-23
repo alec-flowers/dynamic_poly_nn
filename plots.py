@@ -33,7 +33,7 @@ def get_confusion_matrix(loader, net, device):
     return plot_confusion_matrix(y_pred, y_true, loader.dataset.class_to_idx.keys())
 
 
-def plot_confusion_matrix(targets, predicted, labels):
+def plot_confusion_matrix(targets, predicted, labels, title):
     conf_mat = confusion_matrix(targets, predicted)
     fig = sns.heatmap(conf_mat, annot=True,
                       cmap=sns.color_palette("light:#5A9", as_cmap=True),
@@ -44,6 +44,8 @@ def plot_confusion_matrix(targets, predicted, labels):
     tick_marks = np.arange(len(labels)) + 0.5
     plt.xticks(tick_marks, labels, rotation=90)
     plt.yticks(tick_marks, labels, rotation=0)
+    if title:
+        plt.title(f"Confusion Matrix {title[0]} degree: {title[1]}")
     plt.tight_layout()
 
     # For tensorboard output
@@ -64,7 +66,7 @@ def plot_per_class_accuracy(targets, predicted, labels, title=None):
     ax.set_ylabel('Test Accuracy')
     plt.ylim([0, 1])
     if title:
-        ax.set_title(f"Per Class Accuracy {title[0]} degree: {title[1]} Layer: {title[2]}")
+        ax.set_title(f"Per Class Accuracy {title[0]} degree: {title[1]}")
     ax.bar_label(p1, fmt='%.3f', fontsize=11)
     plt.axhline(y=avg_acc, color='r', linestyle='-')
     plt.text(1/len(per_class)-1, avg_acc, f"{avg_acc:.3f}", rotation=0, color='r')
