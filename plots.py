@@ -45,7 +45,7 @@ def plot_confusion_matrix(targets, predicted, labels, title):
     plt.xticks(tick_marks, labels, rotation=90)
     plt.yticks(tick_marks, labels, rotation=0)
     if title:
-        plt.title(f"Confusion Matrix {title[0]} degree: {title[1]}")
+        plt.title(f"Confusion Matrix: {title}")
     plt.tight_layout()
 
     # For tensorboard output
@@ -66,7 +66,7 @@ def plot_per_class_accuracy(targets, predicted, labels, title=None):
     ax.set_ylabel('Test Accuracy')
     plt.ylim([0, 1])
     if title:
-        ax.set_title(f"Per Class Accuracy {title[0]} degree: {title[1]}")
+        ax.set_title(f"Per Class Accuracy: {title}")
     ax.bar_label(p1, fmt='%.3f', fontsize=11)
     plt.axhline(y=avg_acc, color='r', linestyle='-')
     plt.text(1/len(per_class)-1, avg_acc, f"{avg_acc:.3f}", rotation=0, color='r')
@@ -120,19 +120,37 @@ def apply_tsne(data):
     tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
     tsne_results = tsne.fit_transform(data)
     print('t-SNE done! Time elapsed: {} seconds'.format(time.time() - time_start))
-
     return tsne_results
 
 
-def plot_tsne(x, y, true_classes, n_colors, title=None):
-    plt.figure(figsize=(16, 10))
+def plot_tsne(ax, x, y, true_classes, n_colors, title=None):
     sns.scatterplot(
-        x=x, y=y,
+        ax=ax,
+        x=x,
+        y=y,
         hue=true_classes,
         palette=sns.color_palette("hls", n_colors=n_colors),
         legend="full",
         alpha=0.3
     )
     if title:
-        plt.title(f"TSNE Plot for {title[0]} degree: {title[1]} Layer: {title[2]}")
+        plt.title(f"TSNE Plot: {title}")
+
+
+def by_layer_tsne(y_true, register, activation, labels, title=None, figsize=(16, 16)):
+    tsne = TSNE(n_components=2, verbose=1, perplexity=20, learning_rate='auto')
+    fig = plt.figure(figsize=figsize)
+
+    for i, lay in enumerate(register):
+        tsne_results = tsne.fit_transform(np.concatenate(activation[lay]))
+        ax = fig.add_subplot(math.ceil(np.sqrt(len(register))), math.ceil(np.sqrt(len(register))), i+1)
+        plot_tsne(
+            ax,
+            tsne_results[:, 0],
+            tsne_results[:, 1],
+            y_true,
+            n_colors=len(labels),
+            title=f"lay:{lay} {title}"
+        )
     plt.show()
+    return fig
