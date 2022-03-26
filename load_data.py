@@ -80,7 +80,16 @@ def load_dataset(name, transform, root='data', apply_manipulation=None, **kwargs
     return trainset, testset
 
 
-def split_and_load_dataloader(trainset, testset, batch_size=64, num_workers=0,shuffle=True, valid_ratio=0.2, seed=0, subset=False):
+# def split_and_load_dataloader(trainset, testset, batch_size=64, num_workers=0,shuffle=True, valid_ratio=0.2, seed=0, subset=False):
+#     g = torch.Generator()
+#     g.manual_seed(seed)
+#
+#
+#
+#     return train_loader, valid_loader, test_loader
+
+
+def load_trainloader(trainset, batch_size=64, num_workers=0,shuffle=True, valid_ratio=0.2, seed=0, subset=False):
     g = torch.Generator()
     g.manual_seed(seed)
 
@@ -103,7 +112,19 @@ def split_and_load_dataloader(trainset, testset, batch_size=64, num_workers=0,sh
         train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=shuffle, generator=g, num_workers=num_workers, persistent_workers=True)
         valid_loader = None
 
-    test_loader = DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
+    return train_loader, valid_loader
 
-    return train_loader, valid_loader, test_loader
 
+def load_testloader(testset, batch_size=64, num_workers=0, shuffle=True, seed=0, persistent_workers=False):
+    g = torch.Generator()
+    g.manual_seed(seed)
+
+    test_loader = DataLoader(
+        testset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        generator=g,
+        num_workers=num_workers,
+        persistent_workers= persistent_workers
+    )
+    return test_loader
