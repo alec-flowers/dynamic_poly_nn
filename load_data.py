@@ -27,6 +27,29 @@ class OneClassDataset(Dataset):
         return {_class: i for i, _class in enumerate(self.classes)}
 
 
+class FewClassDataset(Dataset):
+    def __init__(self, dataset, ind_to_keep, **kwargs):
+        super(Dataset, self).__init__()
+        self.ind_to_keep = ind_to_keep
+        self.mapping_dict = {ind: i for i, ind in enumerate(self.ind_to_keep)}
+        self.dataset = dataset
+        self.classes = [*[self.dataset.classes[cls] for cls in self.ind_to_keep], "Other"]
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        old_label = self.dataset[idx][1]
+        if old_label in self.mapping_dict:
+            return self.dataset[idx][0], self.mapping_dict[old_label]
+        else:
+            return self.dataset[idx][0], len(self.ind_to_keep)
+
+    @property
+    def class_to_idx(self):
+        return {_class: i for i, _class in enumerate(self.classes)}
+
+
 def only_use_certain_class(dataset, ind_to_keep, **kwargs):
 
     # get indices for subset of classes to keep
