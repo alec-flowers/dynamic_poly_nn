@@ -90,17 +90,21 @@ def prepare_images(dataset, indices):
 def plot_image_grid(images, title: str = "", subplot_title: list =[]):
     # images must be ready to be plotted by plt, that means (M, N, Channels)
     n_images = len(images)
-    plt.figure(figsize=(10, 10))
+    plt.figure(figsize=(math.ceil(np.sqrt(n_images))*5, math.ceil(np.sqrt(n_images))*5))
     for i in range(n_images):
         image = images[i]
         if subplot_title:
-            plt.subplot(math.ceil(np.sqrt(n_images)), math.ceil(np.sqrt(n_images)), i + 1, ).set_title(f"{subplot_title[i]}")
+            plt.subplot(
+                math.ceil(np.sqrt(n_images)),
+                math.ceil(np.sqrt(n_images)),
+                i + 1,
+            ).set_title(f"{subplot_title[i]}", fontsize=16, color='orange')
         else:
             plt.subplot(math.ceil(np.sqrt(n_images)), math.ceil(np.sqrt(n_images)), i + 1,)
         plt.xticks([])
         plt.yticks([])
         plt.grid(False)
-        plt.imshow(image, cmap='gray')
+        plt.imshow(image/2 + 0.5, cmap='gray')
     plt.tight_layout()
     plt.suptitle(title, size=16)
     plt.show()
@@ -137,20 +141,23 @@ def plot_tsne(ax, x, y, true_classes, n_colors, title=None):
         plt.title(f"TSNE Plot: {title}")
 
 
-def by_layer_tsne(y_true, register, activation, labels, title=None, figsize=(16, 16)):
+def by_layer_tsne(y_true, register, activation, labels, title=None):
     tsne = TSNE(n_components=2, verbose=1, perplexity=20, learning_rate='auto')
-    fig = plt.figure(figsize=figsize)
+    horizontal = math.ceil(np.sqrt(len(register)))
+    vertical = math.ceil(np.sqrt(len(register)))
+    fig = plt.figure(figsize=(horizontal * 6, vertical*6))
 
     for i, lay in enumerate(register):
-        tsne_results = tsne.fit_transform(np.concatenate(activation[lay]))
-        ax = fig.add_subplot(math.ceil(np.sqrt(len(register))), math.ceil(np.sqrt(len(register))), i+1)
-        plot_tsne(
-            ax,
-            tsne_results[:, 0],
-            tsne_results[:, 1],
-            y_true,
-            n_colors=len(labels),
-            title=f"lay:{lay} {title}"
-        )
+        if lay in activation:
+            tsne_results = tsne.fit_transform(np.concatenate(activation[lay]))
+            ax = fig.add_subplot(horizontal, vertical, i+1)
+            plot_tsne(
+                ax,
+                tsne_results[:, 0],
+                tsne_results[:, 1],
+                y_true,
+                n_colors=len(labels),
+                title=f"lay:{lay} {title}"
+            )
     plt.show()
     return fig
