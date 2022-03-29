@@ -2,9 +2,6 @@ import torch
 from torchvision import transforms, datasets
 from torch.utils.data import SubsetRandomSampler, DataLoader, Subset, Dataset
 
-# Make it single class labels and see if we can improve accuracy...
-# Look at papers for motivation behind this...
-
 
 class OneClassDataset(Dataset):
     def __init__(self, dataset, binary_class, **kwargs):
@@ -50,6 +47,65 @@ class FewClassDataset(Dataset):
         return {_class: i for i, _class in enumerate(self.classes)}
 
 
+class GreyToColorDataset(Dataset):
+    MAP = {'red': [0, 1, 2], 'green': [1, 0, 2], 'blue': [2, 1, 0]}
+
+    def __init__(self, dataset, color=None, seed=0, **kwargs):
+        super(Dataset, self).__init__()
+        self.dataset = dataset
+        self.classes = dataset.classes
+        self.color = color
+        torch.manual_seed(seed)
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        img, label = self.dataset[idx]
+
+        if self.color:
+            img = self._make_color(img, self.color)
+        else:
+            img = self._spurious_distribution(img, label)
+
+        return img, label
+
+    def _spurious_distribution(self, img, label):
+        rand = torch.rand(1).item()
+
+        # custom noise. If label less than 5 has certain distribution, greater than 5 has different distribution.
+        if label < 5:
+            if rand <= 0.7:
+                img = self._make_color(img, 'red')
+            elif rand <= 0.9:
+                img = self._make_color(img, 'green')
+            else:
+                img = self._make_color(img, 'blue')
+        else:
+            if rand <= 0.7:
+                img = self._make_color(img, 'blue')
+            elif rand <= 0.9:
+                img = self._make_color(img, 'red')
+            else:
+                img = self._make_color(img, 'green')
+
+        return img
+
+    def _make_color(self, img, color):
+        assert color in set(["red", "green", "blue", "uniform"])
+        if color == "uniform":
+            img = torch.cat([img, img, img], 0)
+        else:
+            shape = img.shape
+            rgb = torch.ones((shape[0] + 1, shape[1], shape[2])) * -1
+            img = torch.cat([img, rgb], 0)[GreyToColorDataset.MAP[color], :]
+        return img
+
+    @property
+    def class_to_idx(self):
+        return self.dataset.class_to_idx
+
+
 def only_use_certain_class(dataset, ind_to_keep, **kwargs):
 
     # get indices for subset of classes to keep
@@ -80,15 +136,6 @@ def load_dataset(name, transform, root='data', apply_manipulation=None, **kwargs
     return trainset, testset
 
 
-# def split_and_load_dataloader(trainset, testset, batch_size=64, num_workers=0,shuffle=True, valid_ratio=0.2, seed=0, subset=False):
-#     g = torch.Generator()
-#     g.manual_seed(seed)
-#
-#
-#
-#     return train_loader, valid_loader, test_loader
-
-
 def load_trainloader(trainset, batch_size=64, num_workers=0,shuffle=True, valid_ratio=0.2, seed=0, subset=False):
     g = torch.Generator()
     g.manual_seed(seed)
@@ -115,7 +162,7 @@ def load_trainloader(trainset, batch_size=64, num_workers=0,shuffle=True, valid_
     return train_loader, valid_loader
 
 
-def load_testloader(testset, batch_size=64, num_workers=0, shuffle=True, seed=0, persistent_workers=False):
+def load_testloader(testset, batch_size=64, num_workers=0, shuffle=False, seed=0, persistent_workers=False):
     g = torch.Generator()
     g.manual_seed(seed)
 
