@@ -89,15 +89,10 @@ def test_net(checkpoint, chosen_dataset, register=[], activation=None):
 
 
 if __name__ == '__main__':
-    chosen_dataset = "FashionMNIST"
+    paths = list(filter(
+        lambda x: not re.search('xxxx', x),
+        glob.glob(f"{MODEL_PATH}/CIFAR10/**/sub*.ckpt", recursive=True)
+    ))
+    print(paths)
 
-    degree1 = 4
-    file1 = "20220321-174211"
-
-    degree2 = 16
-    file2 = "20220321-171758"
-
-    path1 = str(MODEL_PATH) + f"/{chosen_dataset}/{degree1}/{file1}.ckpt"
-    path2 = str(MODEL_PATH) + f"/{chosen_dataset}/{degree2}/{file2}.ckpt"
-
-    compare_two_nets_by_sample(path1, path2, chosen_dataset)
+    compare_two_nets_by_sample(paths[0], paths[1], paths[0].split(os.sep)[-3], color='uniform')
