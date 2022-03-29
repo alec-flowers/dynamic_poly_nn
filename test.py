@@ -1,15 +1,19 @@
 import torch
 import matplotlib.pyplot as plt
 import collections
+import re
+import glob
+import os
+import numpy as np
 
 import nets
 from load_data import load_dataset, load_testloader
 from runner import test_to_analyze
-from plots import plot_confusion_matrix
+from plots import plot_confusion_matrix, plot_image_grid
 from utils import MODEL_PATH, get_activation
 
 
-def compare_two_nets_by_sample(path1, path2, chosen_dataset):
+def compare_two_nets_by_sample(path1, path2, chosen_dataset, **kwargs):
     checkpoint1 = torch.load(path1)
     checkpoint2 = torch.load(path2)
 
@@ -18,8 +22,8 @@ def compare_two_nets_by_sample(path1, path2, chosen_dataset):
     assert checkpoint1["ind_to_keep"] == checkpoint2["ind_to_keep"]
     assert checkpoint1["binary_class"] == checkpoint2["binary_class"]
 
-    y_pred_1, y_true_1, labels = test_net(checkpoint1, chosen_dataset)
-    y_pred_2, y_true_2, _ = test_net(checkpoint2, chosen_dataset)
+    y_pred_1, y_true_1, labels, dataset = test_net(checkpoint1, chosen_dataset, **kwargs)
+    y_pred_2, y_true_2, _, _ = test_net(checkpoint2, chosen_dataset, **kwargs)
 
     assert all(val1 == val2 for (val1, val2) in zip(y_true_1, y_true_2))
 
@@ -33,22 +37,60 @@ def compare_two_nets_by_sample(path1, path2, chosen_dataset):
     fig = plot_confusion_matrix(correct_1, correct_2, ["0", "1"], title)
     plt.show()
 
+    difference_when_wrong(y_pred_1, y_pred_2, y_true_2)
 
-def test_net(checkpoint, chosen_dataset, register=[], activation=None):
+    return y_pred_1, y_pred_2, y_true_2, dataset
+
+
+def difference_when_wrong(y_pred_1, y_pred_2, y_true):
+    all_wrong = [1 if p1 != gt and p2 != gt else 0 for (p1, p2, gt) in zip(y_pred_1, y_pred_2, y_true)]
+    ind_list = np.arange(0, len(all_wrong))
+    chosen = ind_list[list(map(bool, all_wrong))]
+    num_differ = sum([0 if p1 == p2 else 1 for (p1, p2) in zip(y_pred_1[chosen], y_pred_2[chosen])])
+    print(f"{num_differ}/{sum(all_wrong)} {num_differ/sum(all_wrong):0.2f}% of misclassified were different.")
+
+
+def plot_examples(dataset, y_pred_1, y_pred_2, y_true, show='all_wrong', num_images=9):
+    all_wrong = [1 if p1 != gt and p2 != gt else 0 for (p1, p2, gt) in zip(y_pred_1, y_pred_2, y_true)]
+    correct_1_other_wrong = [1 if p1 == gt and p2 != gt else 0 for (p1, p2, gt) in zip(y_pred_1, y_pred_2, y_true)]
+    correct_2_other_wrong = [1 if p1 != gt and p2 == gt else 0 for (p1, p2, gt) in zip(y_pred_1, y_pred_2, y_true)]
+    ind_list = np.arange(0, len(all_wrong))
+
+    if show == 'all_wrong':
+        chosen = ind_list[list(map(bool, all_wrong))]
+    elif show == 'correct_1':
+        chosen = ind_list[list(map(bool, correct_1_other_wrong))]
+    elif show == 'correct_2':
+        chosen = ind_list[list(map(bool, correct_2_other_wrong))]
+
+    mapping = {v: k for k, v in dataset.class_to_idx.items()}
+    img_list = []
+    titles = []
+    for i in np.random.choice(chosen, num_images, replace=False):
+        img, label = dataset[i]
+        assert label == y_true[i]
+        img_list.append(img.permute((1, 2, 0)).squeeze())
+        titles.append(f"p1:{mapping[y_pred_1[i]]} p2:{mapping[y_pred_2[i]]} correct:{mapping[y_true[i]]}")
+
+    plot_image_grid(img_list, subplot_title=titles)
+
+
+def test_net(checkpoint, chosen_dataset, register=[], activation=None, **kwargs):
     # Load Data in particular way
     train_dataset, test_dataset = load_dataset(
         chosen_dataset,
         checkpoint["transform"],
         apply_manipulation=checkpoint["apply_manipulation"],
         binary_class=checkpoint["binary_class"],
-        ind_to_keep=checkpoint["ind_to_keep"]
+        ind_to_keep=checkpoint["ind_to_keep"],
+        **kwargs
     )
     # Initialize dataloaders
     test_loader = load_testloader(
         test_dataset,
         batch_size=checkpoint["batch_size"],
         num_workers=0,
-        shuffle=True,
+        shuffle=False,
         seed=0,
     )
 
@@ -71,7 +113,8 @@ def test_net(checkpoint, chosen_dataset, register=[], activation=None):
 
     # add hooks
     for lay in register:
-        getattr(net, lay).register_forward_hook(get_activation(activation, lay))
+        if hasattr(net, lay):
+            getattr(net, lay).register_forward_hook(get_activation(activation, lay))
 
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
@@ -85,7 +128,7 @@ def test_net(checkpoint, chosen_dataset, register=[], activation=None):
     y_pred, y_true = test_to_analyze(net, test_loader, device)
     labels = test_loader.dataset.class_to_idx.keys()
 
-    return y_pred, y_true, labels
+    return y_pred, y_true, labels, test_dataset
 
 
 if __name__ == '__main__':
