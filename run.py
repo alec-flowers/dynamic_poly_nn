@@ -7,32 +7,32 @@ import datetime
 from utils import MODEL_PATH, path_exist, count_parameters, load_checkpoint, WRITER_PATH
 import time
 
-from load_data import load_dataset, only_use_certain_class, load_trainloader, OneClassDataset, FewClassDataset
+from load_data import load_dataset, only_use_certain_class, load_trainloader, OneClassDataset, FewClassDataset, GreyToColorDataset
 import nets
 from runner import train, test, train_profile
 
 
 if __name__ == '__main__':
 
-    CUSTOM_SAVE = "sub2345"
+    CUSTOM_SAVE = ""
     save = True
     DATASETS = ['MNIST', "FashionMNIST", "CIFAR10"]
     chosen_dataset = DATASETS[2]
-    checkpoint = None #str(MODEL_PATH) + f"/{chosen_dataset}/20220311-170934.ckpt"
+    checkpoint = None
     confusion_matrix = False
     subset = False
     num_workers = 4
-    apply_manipulation = FewClassDataset
-    ind_to_keep = [2, 3, 4, 5]
+    apply_manipulation = None
+    ind_to_keep = None
     binary_class = None
 
     # Hyperparameters
     net_name = "CCP"
-    lr = 0.0003
-    epochs_list = [100, 100, 100]
+    lr = 0.001
+    epochs_list = [100]
     batch_size = 64
-    n_degree_list = [4, 8, 16]
-    hidden_size = 16
+    n_degree_list = [2]
+    hidden_size = 1000  # p = 2n + d
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
 
@@ -54,7 +54,8 @@ if __name__ == '__main__':
             transform,
             apply_manipulation=apply_manipulation,
             binary_class=binary_class,
-            ind_to_keep=ind_to_keep
+            ind_to_keep=ind_to_keep,
+            color=None
         )
         # Initialize dataloaders
         train_loader, valid_loader = load_trainloader(
