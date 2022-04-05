@@ -74,8 +74,8 @@ def plot_per_class_accuracy(targets, predicted, labels, title=None):
     print(f"Test Set Average Accuracy: {avg_acc}")
 
 
-def prepare_images(dataset, indices):
-    # mapping so can give an number and will give back description
+def prepare_images(dataset, indices, *args):
+    # mapping so can give a number and will give back description
     mapping = {v: k for k, v in dataset.class_to_idx.items()}
     img_list = []
     label_list = []
@@ -83,7 +83,10 @@ def prepare_images(dataset, indices):
         img, label = dataset[i]
         # put into proper form for plt.imshow
         img_list.append(img.permute((1, 2 ,0)).squeeze())
-        label_list.append(mapping[label])
+        title = ''
+        for j, model in enumerate(args):
+            title = title + f"m{j}: {model[i]} "
+        label_list.append(f"Act: {mapping[label]} "+title)
     return img_list, label_list
 
 
