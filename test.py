@@ -50,6 +50,45 @@ def difference_when_wrong(y_pred_1, y_pred_2, y_true):
     print(f"{num_differ}/{sum(all_wrong)} {num_differ/sum(all_wrong):0.2f}% of misclassified were different.")
 
 
+def diff_when_wrong_many(y_true, *args):
+    # loop through number models +1 for none of them get it
+    how_many_correct = []
+    for i in range(len(args)+1):
+        # check number of correct answers for each datapoint.
+        # If none got it correct, then will be in first list, one correct in second list and so on.
+        # another way is to loop through each list and each time append to correct list
+        how_many_correct.append(
+            list(map(bool,
+                     [1 if sum([vals[0] == vals[i] for i in range(1, len(vals))]) - i == 0 else 0 for vals in zip(y_true, *args)])
+                 )
+        )
+
+    ind_list = np.arange(0, len(y_true))
+    correct_ind = []
+    for i, correct in enumerate(how_many_correct):
+        correct_ind.append(ind_list[correct])
+        print(f"{i} Models Correct: {sum(correct)} of {len(y_true)} is {sum(correct)/len(y_true)*100:0.1f}%")
+        model_combination_correct(ind_list[correct], y_true, *args)
+
+    return correct_ind
+
+
+def model_combination_correct(ind, y_true, *args):
+    counts = {}
+    for val in ind:
+        model = []
+        for i, pred in enumerate(args):
+            if y_true[val] == pred[val]:
+                model.append(i)
+
+        counts[tuple(model)] = counts.get(tuple(model), 0) + 1
+
+    for key, value in counts.items():
+        if key:
+            print(f"    - Models {key} Correct: {value} of {len(ind)} is {value/len(ind)*100:.1f}%")
+    return counts
+
+
 def plot_examples(dataset, y_pred_1, y_pred_2, y_true, show='all_wrong', num_images=9):
     all_wrong = [1 if p1 != gt and p2 != gt else 0 for (p1, p2, gt) in zip(y_pred_1, y_pred_2, y_true)]
     correct_1_other_wrong = [1 if p1 == gt and p2 != gt else 0 for (p1, p2, gt) in zip(y_pred_1, y_pred_2, y_true)]
