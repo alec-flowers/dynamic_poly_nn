@@ -41,6 +41,30 @@ def compare_two_nets_by_sample(path1, path2, chosen_dataset, **kwargs):
 
     return y_pred_1, y_pred_2, y_true_2, dataset
 
+def compare_n_nets_by_sample(paths, chosen_dataset, **kwargs):
+    checkpoint_list = []
+    for path in paths:
+        checkpoint_list.append(torch.load(path))
+
+    for i in range(1,len(checkpoint_list)):
+        assert checkpoint_list[0]["apply_manipulation"] == checkpoint_list[i]["apply_manipulation"]
+        assert str(checkpoint_list[0]["transform"]) == str(checkpoint_list[i]["transform"])
+        assert checkpoint_list[0]["ind_to_keep"] == checkpoint_list[i]["ind_to_keep"]
+        assert checkpoint_list[0]["binary_class"] == checkpoint_list[i]["binary_class"]
+    y_pred_list = []
+    y_true_list = []
+    for checkpoint in checkpoint_list:
+        y_pred, y_true, labels, dataset = test_net(checkpoint, chosen_dataset, **kwargs)
+        y_pred_list.append(y_pred)
+        y_true_list.append(y_true)
+
+    assert all(len(set(val)) == 1 for val in zip(*y_true_list))
+
+    return dataset, y_true, y_pred_list
+
+    # goal is when having multiple networks (potential ensemble) understand who is getting what
+    # and how well they are doing
+
 
 def difference_when_wrong(y_pred_1, y_pred_2, y_true):
     all_wrong = [1 if p1 != gt and p2 != gt else 0 for (p1, p2, gt) in zip(y_pred_1, y_pred_2, y_true)]
