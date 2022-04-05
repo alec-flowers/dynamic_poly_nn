@@ -9,7 +9,7 @@ import numpy as np
 import nets
 from load_data import load_dataset, load_testloader
 from runner import test_to_analyze
-from plots import plot_confusion_matrix, plot_image_grid
+from plots import plot_confusion_matrix, plot_image_grid, per_class_accuracy
 from utils import MODEL_PATH, get_activation
 
 
@@ -139,11 +139,13 @@ def plot_examples(dataset, y_pred_1, y_pred_2, y_true, show='all_wrong', num_ima
 
 
 def test_net(checkpoint, chosen_dataset, register=[], activation=None, **kwargs):
+    print('======================================================')
+    print(f"Dataset: {chosen_dataset} Degree: {checkpoint['n_degree']} Epochs: {checkpoint['epochs']}")
     # Load Data in particular way
+
     train_dataset, test_dataset = load_dataset(
         chosen_dataset,
         checkpoint["transform"],
-        apply_manipulation=checkpoint["apply_manipulation"],
         binary_class=checkpoint["binary_class"],
         ind_to_keep=checkpoint["ind_to_keep"],
         **kwargs
@@ -157,7 +159,6 @@ def test_net(checkpoint, chosen_dataset, register=[], activation=None, **kwargs)
         seed=0,
     )
 
-    print(f"Dataset: {type(test_loader.dataset)}")
     sample_shape = test_loader.dataset[0][0].shape
     # check image is square since using only 1 side of it for the shape
     assert (sample_shape[1] == sample_shape[2])
@@ -190,6 +191,10 @@ def test_net(checkpoint, chosen_dataset, register=[], activation=None, **kwargs)
 
     y_pred, y_true = test_to_analyze(net, test_loader, device)
     labels = test_loader.dataset.class_to_idx.keys()
+
+    per_class_acc, avg_acc = per_class_accuracy(y_true, y_pred)
+    print(f"Average Accuracy: {avg_acc:0.2f} \nPer Class Accuracy: {per_class_acc}")
+
 
     return y_pred, y_true, labels, test_dataset
 
