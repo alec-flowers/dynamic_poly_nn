@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torchvision import transforms, datasets
 from torch.utils.data import SubsetRandomSampler, DataLoader, Subset, Dataset
 
@@ -41,6 +42,48 @@ class FewClassDataset(Dataset):
             return self.dataset[idx][0], self.mapping_dict[old_label]
         else:
             return self.dataset[idx][0], len(self.ind_to_keep)
+
+    @property
+    def class_to_idx(self):
+        return {_class: i for i, _class in enumerate(self.classes)}
+
+
+class SpecialistDataset(Dataset):
+    def __init__(self, dataset, ind_to_keep, generator, **kwargs):
+        super(Dataset, self).__init__()
+        self.ind_to_keep = ind_to_keep
+        # creating mapping from old indices to new ones starting from 0
+        self.mapping_dict = {ind: i for i, ind in enumerate(self.ind_to_keep)}
+        self.dataset = dataset
+        # new class mapping with other bucket
+        self.classes = [*[self.dataset.classes[cls] for cls in self.ind_to_keep], "Other"]
+        self.specialist_ind, self.other_ind = self._calculated_indices()
+        # create random list to sample from all other classes, use generator to keep sampling consistent accross trials
+        self.rand = torch.randint(low=0, high=len(self.other_ind), size=(len(self.specialist_ind),), generator=generator)
+
+    def _calculated_indices(self):
+        mask = np.in1d(np.array(self.dataset.targets), self.ind_to_keep)
+        specialist_ind = np.where(mask)[0]
+        other_ind = np.where(~mask)[0]
+        return specialist_ind, other_ind
+
+    def __len__(self):
+        # 1/2 to be specialist classes, 1/2 to be random sampled from all other distribution
+        return 2*len(self.specialist_ind)
+
+    def __getitem__(self, idx):
+        # if in length of specialist indices, pull from them.
+        if idx < len(self.specialist_ind):
+            idx = self.specialist_ind[idx]
+            old_label = self.dataset[idx][1]
+            return self.dataset[idx][0], self.mapping_dict[old_label]  # give new label from mapping
+
+        elif idx <= 2*len(self.specialist_ind):
+            rand_indx = self.rand[idx-len(self.specialist_ind)]  # rebase idx to 0 index
+            idx = self.other_ind[rand_indx]
+            return self.dataset[idx][0], len(self.ind_to_keep)  # other is the last label
+        else:
+            raise IndexError
 
     @property
     def class_to_idx(self):
