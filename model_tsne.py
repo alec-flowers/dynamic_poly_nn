@@ -10,7 +10,7 @@ import numpy as np
 import glob
 import re
 
-from load_data import load_dataset, only_use_certain_class, OneClassDataset, load_testloader
+from load_data import load_dataset, only_use_certain_class, OneClassDataset, load_testloader, FewClassDataset
 from nets import CCP, NCP
 from runner import train, test, train_profile, test_to_analyze
 from plots import plot_per_class_accuracy, plot_tsne, plot_confusion_matrix, by_layer_tsne
@@ -22,14 +22,14 @@ from test import test_net
 if __name__ == '__main__':
     for file in filter(
             lambda x: not re.search('xxxx', x),
-            glob.glob(f"{MODEL_PATH}/MNIST/**/spurious_e50_20220329*.ckpt", recursive=True)
+            glob.glob(f"{MODEL_PATH}/MNIST/**/spec_tl*.ckpt", recursive=True)
     ):
-        color = 'red'
+        color = None
         chosen_dataset = file.split(os.sep)[-3]
         n_degree = file.split(os.sep)[-2]
 
         # which layers to register hooks
-        REGISTER = ["Id_U4", "Id_U8", "Id_U16"]
+        REGISTER = []
 
         checkpoint = torch.load(file)
         activation = collections.defaultdict(list)
@@ -39,7 +39,8 @@ if __name__ == '__main__':
             chosen_dataset=chosen_dataset,
             register=REGISTER,
             activation=activation,
-            color=color
+            color=color,
+            apply_manipulation=checkpoint["apply_manipulation"]
         )
 
         title = f"{chosen_dataset} degree: {n_degree}"
