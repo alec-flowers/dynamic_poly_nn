@@ -112,6 +112,9 @@ def plot_image_grid(images, title: str = "", subplot_title: list =[]):
     plt.suptitle(title, size=16)
     plt.show()
 
+def plot_one(img):
+    plt.imshow(img.permute((1, 2, 0)).squeeze())
+    plt.show()
 
 def apply_pca(data, n_components):
     pca = PCA(n_components=n_components)
