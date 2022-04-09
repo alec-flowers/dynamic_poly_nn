@@ -1,3 +1,4 @@
+import sys
 import torch
 import numpy as np
 from torchvision import transforms, datasets
@@ -168,13 +169,49 @@ def only_use_certain_class(dataset, ind_to_keep, **kwargs):
     return dataset
 
 
-def load_dataset(name, transform, root='data', apply_manipulation=None, **kwargs):
-    trainset = getattr(datasets, name)(root=root, train=True, download=True, transform=transform)
-    testset = getattr(datasets, name)(root=root, train=False, download=True, transform=transform)
+def get_transform(name, augmentation=True, rsz=None, degrees=None, scale=None, shear=None, **kwargs):
+    if name == "MNIST" or name == "FashionMNIST":
+        transform_train = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+        transform_test = transform_train
+    elif 'CIFAR' in name:
+        if augmentation:
+            trans = [transforms.RandomCrop(32, padding=4),
+                     transforms.RandomHorizontalFlip()]
+            if degrees is not None:
+                trans.append(transforms.RandomAffine(degrees, scale=scale, shear=shear))
+            if rsz is not None:
+                trans.append(transforms.Resize(rsz))
+        else:
+            trans = []
+            if rsz is not None:
+                trans.append(transforms.Resize(rsz))
+        trans += [
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ]
+        transform_train = transforms.Compose(trans)
+
+        transform_test = transforms.Compose(trans[-2:])
+    elif name == 'SVHN':
+        transform_train = transforms.Compose(
+            [transforms.ToTensor(),
+             #              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+             ])
+        transform_test = transform_train
+    else:
+        raise NotImplementedError('name: {}'.format(name))
+
+    return transform_train, transform_test
+
+def load_dataset(name, root='/tmp/', apply_manipulation=None, **kwargs):
+    transform_train, transform_test = get_transform(name, **kwargs)
+
+    trainset = getattr(datasets, name)(root=root, train=True, download=True, transform=transform_train)
+    testset = getattr(datasets, name)(root=root, train=False, download=True, transform=transform_test)
 
     if apply_manipulation:
-        trainset = apply_manipulation(trainset, **kwargs)
-        testset = apply_manipulation(testset, **kwargs)
+        trainset = getattr(sys.modules[__name__], apply_manipulation)(trainset, **kwargs)
+        testset = getattr(sys.modules[__name__], apply_manipulation)(testset, **kwargs)
 
     return trainset, testset
 
@@ -186,7 +223,7 @@ def load_trainloader(trainset, batch_size=64, num_workers=0,shuffle=True, valid_
     if valid_ratio > 0:
         # # divide the training set into validation and training set.
         if subset:
-            instance_num = 1000
+            instance_num = 10000
         else:
             instance_num = len(trainset)
         print(f"Num Samples in train + validation: {instance_num}")
@@ -196,10 +233,10 @@ def load_trainloader(trainset, batch_size=64, num_workers=0,shuffle=True, valid_
         train_sampler, valid_sampler = SubsetRandomSampler(train_idx), SubsetRandomSampler(valid_idx)
 
         # Note without persistent_workers=True, cost to restart new threads to do loading is brutal.
-        train_loader = DataLoader(trainset, batch_size=batch_size, sampler=train_sampler, generator=g, num_workers=num_workers, persistent_workers=True)
-        valid_loader = DataLoader(trainset, batch_size=batch_size, sampler=valid_sampler, generator=g, num_workers=num_workers, persistent_workers=True)
+        train_loader = DataLoader(trainset, batch_size=batch_size, sampler=train_sampler, generator=g, num_workers=num_workers, persistent_workers=True, pin_memory=True)
+        valid_loader = DataLoader(trainset, batch_size=batch_size, sampler=valid_sampler, generator=g, num_workers=num_workers, persistent_workers=True, pin_memory=True)
     else:
-        train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=shuffle, generator=g, num_workers=num_workers, persistent_workers=True)
+        train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=shuffle, generator=g, num_workers=num_workers, persistent_workers=True, pin_memory=True)
         valid_loader = None
 
     return train_loader, valid_loader
@@ -215,6 +252,6 @@ def load_testloader(testset, batch_size=64, num_workers=0, shuffle=False, seed=0
         shuffle=shuffle,
         generator=g,
         num_workers=num_workers,
-        persistent_workers= persistent_workers
+        persistent_workers=persistent_workers
     )
     return test_loader
