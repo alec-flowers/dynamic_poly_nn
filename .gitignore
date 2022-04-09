@@ -136,3 +136,4 @@ dmypy.json
 /runs
 /models
 test.ipynb
+/logs/
