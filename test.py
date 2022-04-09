@@ -1,16 +1,15 @@
 import torch
 import matplotlib.pyplot as plt
-import collections
 import re
 import glob
 import os
 import numpy as np
 
-import nets
+from networks import nets
 from load_data import load_dataset, load_testloader
 from runner import test_to_analyze
 from plots import plot_confusion_matrix, plot_image_grid, per_class_accuracy
-from utils import MODEL_PATH, get_activation
+from utils import get_activation
 
 
 def compare_two_nets_by_sample(path1, path2, chosen_dataset, **kwargs):

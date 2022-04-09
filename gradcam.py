@@ -1,17 +1,12 @@
 # TODO Dumb idea, technique works for CNN's, not for my type of neural network.
 
-from pytorch_grad_cam import GradCAM, ScoreCAM, GradCAMPlusPlus, AblationCAM, XGradCAM, EigenCAM, FullGrad
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from torchvision.models import resnet50
-
 import torch
 import re
 import glob
 from utils import MODEL_PATH
 
 from load_data import load_dataset
-import nets
+from networks import nets
 
 if __name__ == '__main__':
 

@@ -3,18 +3,18 @@ from torch import nn
 
 
 class CCP(nn.Module):
-    def __init__(self, hidden_size, image_size=28, channels_in=1, n_degree=4, bias=False, n_classes=10):
+    def __init__(self, hidden_size, image_size=28, channels_in=1, n_degree=4, bias=False, num_classes=10):
         super(CCP, self).__init__()
         self.image_size = image_size
         self.channels_in = channels_in
         self.total_image_size = self.image_size * self.image_size * channels_in
         self.hidden_size = hidden_size
-        self.n_classes = n_classes
+        self.num_classes = num_classes
         self.n_degree = n_degree
         for i in range(1, self.n_degree + 1):
             setattr(self, f'U{i}', nn.Linear(self.total_image_size, self.hidden_size, bias=bias))
             setattr(self, f'Id_U{i}', nn.Identity())
-        self.C = nn.Linear(self.hidden_size, self.n_classes, bias=True)
+        self.C = nn.Linear(self.hidden_size, self.num_classes, bias=True)
 
     def forward(self, z):
         h = z.view(-1, self.total_image_size)

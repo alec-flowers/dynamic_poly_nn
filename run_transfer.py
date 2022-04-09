@@ -8,10 +8,9 @@ import datetime
 from utils import MODEL_PATH, path_exist, count_parameters, load_checkpoint, WRITER_PATH
 import time
 
-from load_data import load_dataset, only_use_certain_class, load_trainloader, OneClassDataset, FewClassDataset, GreyToColorDataset, SpecialistDataset
-import nets
-from runner import train, test, train_profile
-
+from load_data import load_dataset, load_trainloader, SpecialistDataset
+from networks import nets
+from runner import train, test
 
 if __name__ == '__main__':
 

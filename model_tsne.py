@@ -1,19 +1,10 @@
 import torch
 import os
-from torch import optim
-from torchvision import transforms
-from torch.utils.tensorboard import SummaryWriter
-import datetime
-from utils import MODEL_PATH, path_exist, count_parameters, load_checkpoint
-from sklearn.manifold import TSNE
-import numpy as np
+from utils import MODEL_PATH
 import glob
 import re
 
-from load_data import load_dataset, only_use_certain_class, OneClassDataset, load_testloader, FewClassDataset
-from nets import CCP, NCP
-from runner import train, test, train_profile, test_to_analyze
-from plots import plot_per_class_accuracy, plot_tsne, plot_confusion_matrix, by_layer_tsne
+from plots import plot_per_class_accuracy, plot_confusion_matrix
 import collections
 import matplotlib.pyplot as plt
 from test import test_net
