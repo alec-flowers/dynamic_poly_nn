@@ -1,0 +1,17 @@
+learning_rate: 0.1
+
+dataset:
+  root: /tmp/
+  batch_size: 128
+  db: cifar100
+
+model:
+  fn: models/resnet.py
+  name: ResNet18
+  args:
+    train: True
+    num_classes: 100
+
+training_info:
+  total_epochs: 120
+  display_interval: 200
