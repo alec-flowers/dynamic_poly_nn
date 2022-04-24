@@ -1,9 +1,12 @@
 import sys
 import torch
+import logging
 import numpy as np
 from torchvision import transforms, datasets
 from torch.utils.data import SubsetRandomSampler, DataLoader, Subset, Dataset
+from utils import mask_radial, filter_freq_3channel
 
+logger = logging.getLogger(__name__)
 
 class OneClassDataset(Dataset):
     def __init__(self, dataset, binary_class, **kwargs):
@@ -149,6 +152,33 @@ class GreyToColorDataset(Dataset):
     def class_to_idx(self):
         return self.dataset.class_to_idx
 
+class FrequencyDataset(Dataset):
+    def __init__(self, dataset, r, how='low', **kwargs):
+        assert how in {'low', 'high'}
+        super(Dataset, self).__init__()
+        self.dataset = dataset
+        self.r = r
+        self.classes = dataset.classes
+        self.shape = self.dataset[0][0].shape
+        msk = mask_radial(np.zeros([self.shape[1], self.shape[2]]), self.r)
+        if how == 'low':
+            self.mask = msk
+        else:
+            self.mask = 1 - msk
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        img, label = self.dataset[idx]
+        img = filter_freq_3channel(img, self.mask)
+        return img, label
+
+
+    @property
+    def class_to_idx(self):
+        return {_class: i for i, _class in enumerate(self.classes)}
+
 
 def only_use_certain_class(dataset, ind_to_keep, **kwargs):
 
@@ -169,7 +199,7 @@ def only_use_certain_class(dataset, ind_to_keep, **kwargs):
     return dataset
 
 
-def get_transform(name, augmentation=True, rsz=None, degrees=None, scale=None, shear=None, **kwargs):
+def get_transform(name, augmentation=False, rsz=None, degrees=None, scale=None, shear=None, **kwargs):
     if name == "MNIST" or name == "FashionMNIST":
         transform_train = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
         transform_test = transform_train
@@ -226,7 +256,7 @@ def load_trainloader(trainset, batch_size=64, num_workers=0,shuffle=True, valid_
             instance_num = 10000
         else:
             instance_num = len(trainset)
-        print(f"Num Samples in train + validation: {instance_num}")
+        logger.info(f"Num Samples in train + validation: {instance_num}")
         indices = list(range(instance_num))
         split_pt = int(instance_num * valid_ratio)
         train_idx, valid_idx = indices[split_pt:], indices[:split_pt]
