@@ -40,7 +40,7 @@ def plot_confusion_matrix(targets, predicted, labels, title):
                       cbar_kws={'label': 'count'}, fmt='g')
     plt.xlabel("Predicted label")
     plt.ylabel("True label")
-    # plt.title("Confusion matrix for the " + title + " data")
+    # plt.title("Confusion matrix for the " + title + " .data")
     tick_marks = np.arange(len(labels)) + 0.5
     plt.xticks(tick_marks, labels, rotation=90)
     plt.yticks(tick_marks, labels, rotation=0)
@@ -74,20 +74,22 @@ def plot_per_class_accuracy(targets, predicted, labels, title=None):
     print(f"Test Set Average Accuracy: {avg_acc}")
 
 
-def prepare_images(dataset, indices, *args):
+def prepare_images(dataset, indices, *args, unorm=None):
     # mapping so can give a number and will give back description
     mapping = {v: k for k, v in dataset.class_to_idx.items()}
     img_list = []
     label_list = []
     for i in indices:
         img, label = dataset[i]
+        if unorm:
+            img = unorm(img)
         # put into proper form for plt.imshow
         img_list.append(img.permute((1, 2 ,0)).squeeze())
         title = ''
         for j, model in enumerate(args):
             title = title + f"m{j}: {model[i]} "
         label_list.append(f"Act: {mapping[label]} "+title)
-    return img_list, label_list
+    return img_list, label_list, mapping
 
 
 def plot_image_grid(images, title: str = "", subplot_title: list =[]):
@@ -107,7 +109,7 @@ def plot_image_grid(images, title: str = "", subplot_title: list =[]):
         plt.xticks([])
         plt.yticks([])
         plt.grid(False)
-        plt.imshow(image/2 + 0.5, cmap='gray')
+        plt.imshow(image, cmap='gray')
     plt.tight_layout()
     plt.suptitle(title, size=16)
     plt.show()
