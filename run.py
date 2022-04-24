@@ -7,14 +7,14 @@ from torch import optim
 import yaml
 from torch.utils.tensorboard import SummaryWriter
 import datetime
-from utils import path_exist, count_parameters, load_checkpoint, REPO_ROOT, CONFIGS_PATH, save_checkpoint, load_model, set_seed, init_weights
+from utils import path_exist, count_parameters, load_checkpoint, REPO_ROOT, CONFIGS_PATH, save_checkpoint, load_model, set_seed, init_weights, create_logger
 import time
+import logging
 
 from load_data import load_dataset, load_trainloader
 from networks import nets
-from runner import train, test
+from runner import train, test, train_profile
 
-# TODO - Learning Rate Milestones
 
 def parse_args():
     parser = argparse.ArgumentParser(description="run networks")
@@ -48,12 +48,13 @@ def run(args):
     savepath = f"{curdir}/{folders_for_save}"
     path_exist(savepath)
 
-    with open(os.path.join(savepath, f"r_{args.config_name}"), 'w') as file:
+    with open(os.path.join(savepath, f"r_{args.config_name.split('/')[-1]}"), 'w') as file:
         yaml.dump(
             config,
             file,
             default_flow_style=False,
         )
+    create_logger(savepath, path_time)
 
     # Load Data in particular way
     train_dataset, test_dataset = load_dataset(**config["dataset"])
@@ -66,7 +67,7 @@ def run(args):
     )
 
     #TODO may need to change this with RESNET
-    print(f"Length of iters per epoch: {len(train_loader)}. Length of valid batches: {len(valid_loader)}. Size of img: {train_loader.dataset[0][0].shape}")
+    logging.info(f"Length of iters per epoch: {len(train_loader)}. Length of valid batches: {len(valid_loader)}. Size of img: {train_loader.dataset[0][0].shape}")
     sample_shape = train_loader.dataset[0][0].shape
     assert(sample_shape[1] == sample_shape[2]), "Image is not square, but only use one side"
     image_size = sample_shape[1]
@@ -85,7 +86,7 @@ def run(args):
 
     num_params = count_parameters(net)
     deg = config['model']['args'].get('n_degree', config['model']['args'].get('num_blocks', None))
-    print(f"Degree: {deg} Num Parameters: {num_params}")
+    logging.info(f"Degree: {deg} Num Parameters: {num_params}")
 
     # `define the optimizer.
     decay = config['training_info'].get('weight_dec', 5e-4)
@@ -93,7 +94,7 @@ def run(args):
                     momentum=0.9, weight_decay=decay)
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
-    print(f"Running on: {device}")
+    logging.info(f"Running on: {device}")
 
     start_epoch = -1
     if config['checkpoint']:
@@ -101,9 +102,9 @@ def run(args):
         start_epoch = checkpoint['epoch']
 
     if device == 'cuda':
-        print(f"Num Devices: {torch.cuda.device_count()}")
+        logging.info(f"Num Devices: {torch.cuda.device_count()}")
         dev = torch.cuda.current_device()
-        print(f"Device Name: {torch.cuda.get_device_name(dev)}")
+        logging.info(f"Device Name: {torch.cuda.get_device_name(dev)}")
     criterion = torch.nn.CrossEntropyLoss().to(device)
     net.to(device)
 
@@ -134,7 +135,7 @@ def run(args):
 
     writer.flush()
     total_time = time.time() - start_time
-    print(f"Total Training Time: {total_time:.1f} seconds")
+    logging.info(f"Total Training Time: {total_time:.1f} seconds")
 
 
 if __name__ == '__main__':
