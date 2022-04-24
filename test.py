@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import torch
 import matplotlib.pyplot as plt
 import re
@@ -9,28 +11,27 @@ from networks import nets
 from load_data import load_dataset, load_testloader
 from runner import test_to_analyze
 from plots import plot_confusion_matrix, plot_image_grid, per_class_accuracy
-from utils import get_activation
+from utils import get_activation, load_model, load_yaml, SCRATCH_PATH
 
 
-def compare_two_nets_by_sample(path1, path2, chosen_dataset, **kwargs):
-    checkpoint1 = torch.load(path1)
-    checkpoint2 = torch.load(path2)
+def compare_two_nets_by_sample(path1, path2, config1, config2, **kwargs):
+    cuda = torch.cuda.is_available()
+    device = torch.device('cuda' if cuda else 'cpu')
+    checkpoint1 = torch.load(path1, map_location=device)
+    checkpoint2 = torch.load(path2, map_location=device)
 
-    assert checkpoint1["apply_manipulation"] == checkpoint2["apply_manipulation"]
-    assert str(checkpoint1["transform"]) == str(checkpoint2["transform"])
-    assert checkpoint1["ind_to_keep"] == checkpoint2["ind_to_keep"]
-    assert checkpoint1["binary_class"] == checkpoint2["binary_class"]
+    config1 = load_yaml(config1)
+    config2 = load_yaml(config2)
 
-    y_pred_1, y_true_1, labels, dataset = test_net(checkpoint1, chosen_dataset, **kwargs)
-    y_pred_2, y_true_2, _, _ = test_net(checkpoint2, chosen_dataset, **kwargs)
+    y_pred_1, y_true_1, labels, dataset = test_net(checkpoint1, config1, **kwargs)
+    y_pred_2, y_true_2, _, _ = test_net(checkpoint2, config2, **kwargs)
 
     assert all(val1 == val2 for (val1, val2) in zip(y_true_1, y_true_2))
 
-    title = f"{chosen_dataset} x: {checkpoint1['n_degree']} y: {checkpoint2['n_degree']}"
+    title = f"{config1['dataset']['name']} x: {config1['model']['name']} y: {config2['model']['name']}"
     fig = plot_confusion_matrix(y_pred_1, y_pred_2, labels, title)
     plt.show()
 
-    title = f"{chosen_dataset} x: {checkpoint1['n_degree']} y: {checkpoint2['n_degree']}"
     correct_1 = [0 if val1 == val2 else 1 for (val1, val2) in zip(y_pred_1, y_true_1)]
     correct_2 = [0 if val1 == val2 else 1 for (val1, val2) in zip(y_pred_2, y_true_2)]
     fig = plot_confusion_matrix(correct_1, correct_2, ["0", "1"], title)
@@ -40,20 +41,20 @@ def compare_two_nets_by_sample(path1, path2, chosen_dataset, **kwargs):
 
     return y_pred_1, y_pred_2, y_true_2, dataset
 
-def compare_n_nets_by_sample(paths, chosen_dataset, **kwargs):
+def compare_n_nets_by_sample(paths, configs, **kwargs):
+    assert len(paths) == len(configs)
     checkpoint_list = []
-    for path in paths:
-        checkpoint_list.append(torch.load(path))
+    config_list = []
+    cuda = torch.cuda.is_available()
+    device = torch.device('cuda' if cuda else 'cpu')
+    for i in range(len(paths)):
+        checkpoint_list.append(torch.load(paths[i], map_location=device))
+        config_list.append(load_yaml(configs[i]))
 
-    for i in range(1,len(checkpoint_list)):
-        assert checkpoint_list[0]["apply_manipulation"] == checkpoint_list[i]["apply_manipulation"]
-        assert str(checkpoint_list[0]["transform"]) == str(checkpoint_list[i]["transform"])
-        assert checkpoint_list[0]["ind_to_keep"] == checkpoint_list[i]["ind_to_keep"]
-        assert checkpoint_list[0]["binary_class"] == checkpoint_list[i]["binary_class"]
     y_pred_list = []
     y_true_list = []
-    for checkpoint in checkpoint_list:
-        y_pred, y_true, labels, dataset = test_net(checkpoint, chosen_dataset, **kwargs)
+    for i in range(len(checkpoint_list)):
+        y_pred, y_true, labels, dataset = test_net(checkpoint_list[i], config_list[i], **kwargs)
         y_pred_list.append(y_pred)
         y_true_list.append(y_true)
 
@@ -88,16 +89,18 @@ def diff_when_wrong_many(y_true, *args):
 
     ind_list = np.arange(0, len(y_true))
     correct_ind = []
+    model_indices = {}
     for i, correct in enumerate(how_many_correct):
         correct_ind.append(ind_list[correct])
         print(f"{i} Models Correct: {sum(correct)} of {len(y_true)} is {sum(correct)/len(y_true)*100:0.1f}%")
-        model_combination_correct(ind_list[correct], y_true, *args)
+        model_indices.update(model_combination_correct(ind_list[correct], y_true, *args))
 
-    return correct_ind
+    return correct_ind, model_indices
 
 
 def model_combination_correct(ind, y_true, *args):
     counts = {}
+    model_indices = defaultdict(list)
     for val in ind:
         model = []
         for i, pred in enumerate(args):
@@ -105,11 +108,12 @@ def model_combination_correct(ind, y_true, *args):
                 model.append(i)
 
         counts[tuple(model)] = counts.get(tuple(model), 0) + 1
+        model_indices[tuple(model)].append(val)
 
     for key, value in counts.items():
         if key:
             print(f"    - Models {key} Correct: {value} of {len(ind)} is {value/len(ind)*100:.1f}%")
-    return counts
+    return model_indices
 
 
 def plot_examples(dataset, y_pred_1, y_pred_2, y_true, show='all_wrong', num_images=9):
@@ -137,22 +141,18 @@ def plot_examples(dataset, y_pred_1, y_pred_2, y_true, show='all_wrong', num_ima
     plot_image_grid(img_list, subplot_title=titles)
 
 
-def test_net(checkpoint, chosen_dataset, register=[], activation=None, **kwargs):
+def test_net(checkpoint, config, register=[], activation=None, **kwargs):
     print('======================================================')
-    print(f"Dataset: {chosen_dataset} Degree: {checkpoint['n_degree']} Epochs: {checkpoint['epochs']}")
+    print(f"Dataset: {config['dataset']['name']} Epochs: {config['training_info']['epochs']}")
     # Load Data in particular way
 
     train_dataset, test_dataset = load_dataset(
-        chosen_dataset,
-        checkpoint["transform"],
-        binary_class=checkpoint["binary_class"],
-        ind_to_keep=checkpoint["ind_to_keep"],
-        **kwargs
+        **config['dataset']
     )
     # Initialize dataloaders
     test_loader = load_testloader(
         test_dataset,
-        batch_size=checkpoint["batch_size"],
+        batch_size=config['dataloader']['batch_size'],
         num_workers=0,
         shuffle=False,
         seed=0,
@@ -162,15 +162,14 @@ def test_net(checkpoint, chosen_dataset, register=[], activation=None, **kwargs)
     # check image is square since using only 1 side of it for the shape
     assert (sample_shape[1] == sample_shape[2])
     image_size = sample_shape[1]
-    n_classes = len(test_loader.dataset.classes)
+    num_classes = len(test_loader.dataset.classes)
     channels_in = sample_shape[0]
 
-    net = getattr(nets, checkpoint.get("net_name", "CCP"))(
-        checkpoint["hidden_size"],
-        image_size=image_size,
-        n_classes=n_classes,
-        channels_in=channels_in,
-        n_degree=checkpoint["n_degree"]
+    net = load_model(
+        config['model'],
+        image_size=image_size,  # this parameter doesn't matter for Resnet
+        num_classes=num_classes,
+        channels_in=channels_in
     )
     net.load_state_dict(checkpoint['model_state_dict'])
 
@@ -188,6 +187,8 @@ def test_net(checkpoint, chosen_dataset, register=[], activation=None, **kwargs)
         dev = torch.cuda.current_device()
         print(f"Device Name: {torch.cuda.get_device_name(dev)}")
 
+    net.to(device)
+
     y_pred, y_true = test_to_analyze(net, test_loader, device)
     labels = test_loader.dataset.class_to_idx.keys()
 
@@ -201,8 +202,14 @@ def test_net(checkpoint, chosen_dataset, register=[], activation=None, **kwargs)
 if __name__ == '__main__':
     paths = list(filter(
         lambda x: not re.search('xxxx', x),
-        glob.glob(f"{MODEL_PATH}/CIFAR10/**/sub*.ckpt", recursive=True)
+        glob.glob(f"{SCRATCH_PATH}/logs/CIFAR10/*poly*/best_model", recursive=True)
     ))
     print(paths)
 
-    compare_two_nets_by_sample(paths[0], paths[1], paths[0].split(os.sep)[-3], color='uniform')
+    configs = list(filter(
+        lambda x: not re.search('xxxx', x),
+        glob.glob(f"{SCRATCH_PATH}/logs/CIFAR10/*poly*/r_resnet_pi-net.yml", recursive=True)
+    ))
+    print(configs)
+
+    compare_two_nets_by_sample(paths[0], paths[1], configs[0], configs[1])
