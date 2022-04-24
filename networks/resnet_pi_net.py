@@ -97,12 +97,8 @@ class BasicBlock(nn.Module):
         """ Aux function to define the local conv/fc layers. """
         if n_lconvs > 0:
             s = '' if n_lconvs == 1 else 's'
-            print('Define {} local {}{}{}.'.format(n_lconvs, key, typet, s))
+            # print('Define {} local {}{}{}.'.format(n_lconvs, key, typet, s))
             if typet == 'conv':
-                # Has to do with some weird interaction with partial class
-                # All the other convs are working with bias=False
-                # convl = partial(nn.Conv2d, in_channels=planes, out_channels=planes,
-                #                 kernel_size=kern_loc, stride=1, padding=kern_loc > 1, bias=False)
                 convl = nn.Conv2d(in_channels=planes, out_channels=planes,
                                 kernel_size=kern_loc, stride=1, padding=0, bias=False)
             else:
@@ -189,7 +185,7 @@ class ResNet(nn.Module):
         # # if linear case and requested, include an output non-linearity.
         cond = self.out_activ and self.activ(-100) == -100
         self.oactiv = partial(nn.ReLU(inplace=True)) if cond else lambda x: x
-        print('output non-linearity: #', self.out_activ, cond)
+        # print('output non-linearity: #', self.out_activ, cond)
 
 
     def _make_layer(self, block, planes, num_blocks, stride, **kwargs):
