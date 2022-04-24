@@ -137,3 +137,5 @@ dmypy.json
 /models
 test.ipynb
 /logs/
+/scratch
+/configs
