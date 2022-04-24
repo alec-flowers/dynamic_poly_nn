@@ -1,45 +1,45 @@
 comment: '21/10/2020; fixed according to the cvpr paper (pi-net); equivalent of resnet18.'
 seed: 0
-custom_save: test
+custom_save: poly
 checkpoint:
 
 dataset:
   name: CIFAR10
-  root: data
+  root: /tmp/
   apply_manipulation:
   ind_to_keep:
   binary_class:
   color:
 
 dataloader:
-  batch_size: 64
+  batch_size: 128
   num_workers: 2
   shuffle: True
   valid_ratio: 0.2
-  subset: True
+  subset: False
 
 model:
   fn: networks.resnet_pi_net
-  name: ResNetnew
+  name: ResNet18
   args:
     train: True
     use_alpha: True
     n_lconvs: 2  # problems with this argument
     use_lactiv: True
     norm_local: 1
-    num_blocks: [1, 1, 1, 1]
-    n_channels: [32, 64, 128, 128]
+    #num_blocks: [1, 1, 1, 1]
+    #n_channels: [32, 64, 128, 128]
     div_std: 0
     n_xconvs: 0
     norm_x: -1
     what_lactiv: 2
-    use_only_first_conv: False
+    use_only_first_conv: True
 
 training_info:
   lr: 0.1
   lr_milestones: [40, 60, 80, 100]
   lr_gamma: 0.1
-  epochs: 80  # this is total, so if we load a checkpoint with 40, will only do 40 epochs
+  epochs: 81  # this is total, so if we load a checkpoint with 40, will only do 40 epochs
   save_every_epoch: 40
   test_every_epoch: 5
-  display_interval: 10
+  display_interval: 100
