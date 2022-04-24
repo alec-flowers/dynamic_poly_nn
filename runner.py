@@ -1,9 +1,11 @@
 import sys
 import torch
 import time
+import logging
 from torch.profiler import tensorboard_trace_handler
 from plots import get_confusion_matrix, plot_confusion_matrix, plot_one
 
+logger = logging.getLogger(__name__)
 
 def train(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix=False, profiler=None, display_interval=100):
     """ Perform single epoch of the training."""
@@ -35,7 +37,7 @@ def train(net, train_loader, optimizer, criterion, epoch, device, writer, confus
         if idx % display_interval == 0 and idx > 0:
             m2 = ('Epoch: {}, Epoch iters: {} / {}\t'
                   'Loss: {:.04f}, Acc: {:.06f}')
-            print(m2.format(epoch, idx, len(train_loader), float(train_loss), acc))
+            logger.info(m2.format(epoch, idx, len(train_loader), float(train_loss), acc))
     total_time = time.time() - start_time
     writer.add_scalar("Loss/Train", train_loss, epoch)
     writer.add_scalar("Accuracy/Train", acc, epoch)
@@ -46,7 +48,7 @@ def train(net, train_loader, optimizer, criterion, epoch, device, writer, confus
         # writer.flush()
 
 
-def train_profile(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix):
+def train_profile(net, train_loader, optimizer, criterion, epoch, device, writer, confusion_matrix=False, display_interval=100):
     with torch.profiler.profile(
             schedule=torch.profiler.schedule(
                 wait=2,
@@ -64,11 +66,12 @@ def train_profile(net, train_loader, optimizer, criterion, epoch, device, writer
               device=device,
               writer=writer,
               confusion_matrix=confusion_matrix,
-              profiler=profiler)
+              profiler=profiler,
+              display_interval=display_interval)
 
 
 def test(net, test_loader, criterion, epoch, device, writer):
-    """ Perform testing, i.e. run net on test_loader data
+    """ Perform testing, i.e. run net on test_loader .data
         and return the accuracy. """
     net.eval()
     correct, total, running_loss = 0, 0, 0
@@ -96,7 +99,7 @@ def test(net, test_loader, criterion, epoch, device, writer):
     writer.add_scalar("Accuracy/Test", acc, epoch)
     writer.add_scalar("1 Epoch Time/Test", total_time, epoch)
 
-    print(f'Epoch {epoch} (Validation - Loss: {test_loss:.03f} & Accuracy: {acc:.03f}')
+    logger.info(f'Epoch {epoch} (Validation - Loss: {test_loss:.03f} & Accuracy: {acc:.03f}')
     return acc
 
 
