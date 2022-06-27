@@ -9,7 +9,7 @@ import yaml
 import torch.nn as nn
 import torch.nn.init as init
 import pandas as pd
-from tensorflow.python.summary.summary_iterator import summary_iterator
+import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +187,7 @@ def filter_freq_3channel(img, mask):
 
 # modified from https://laszukdawid.com/blog/2021/01/26/parsing-tensorboard-data-locally/
 def convert_tb_data(root_dir, sort_by=None):
+    from tensorflow.python.summary.summary_iterator import summary_iterator
     """Convert local TensorBoard data into Pandas DataFrame.
 
     Function takes the root directory path and recursively parses
@@ -239,3 +240,18 @@ def convert_tb_data(root_dir, sort_by=None):
         all_df = all_df.sort_values(sort_by)
 
     return all_df.reset_index(drop=True)
+
+
+def save_pickle_append(data, path, file):
+    """Save a file as .pickle"""
+    filename = os.path.join(path, file)
+    with open(filename, "a+b") as f:
+        pickle.dump(data, f)
+
+
+def load_pickle(path, file):
+    """Load pickle file"""
+    file_path = os.path.join(path, file)
+    with open(file_path, "rb") as f:
+        data = pickle.load(f)
+    return data
