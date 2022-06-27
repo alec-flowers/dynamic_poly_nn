@@ -26,4 +26,4 @@ Read the documentation regarding [how to use Scitas (EPFL HPC cluster)](/scitas_
    1) SCITAS Cluster Parameters
    2) Loads appropriate environment packages (Interpreter, Python, Packages)
    3) Runs appropriate python file
-3) Runs bash script by using slurm command `sbatch <PATH TO BASH SCRIPT>`
+3) Run bash script by using slurm command `sbatch <PATH TO BASH SCRIPT>`
