@@ -3,7 +3,7 @@ import torch
 import logging
 import numpy as np
 from torchvision import transforms, datasets
-from torch.utils.data import SubsetRandomSampler, DataLoader, Subset, Dataset
+from torch.utils.data import SubsetRandomSampler, DataLoader, Subset, Dataset, SequentialSampler
 from utils import mask_radial, filter_freq_3channel
 
 logger = logging.getLogger(__name__)
@@ -253,18 +253,23 @@ def load_trainloader(trainset, batch_size=64, num_workers=0,shuffle=True, valid_
     if valid_ratio > 0:
         # # divide the training set into validation and training set.
         if subset:
-            instance_num = 10000
+            instance_num = 1000
         else:
             instance_num = len(trainset)
         logger.info(f"Num Samples in train + validation: {instance_num}")
         indices = list(range(instance_num))
         split_pt = int(instance_num * valid_ratio)
         train_idx, valid_idx = indices[split_pt:], indices[:split_pt]
-        train_sampler, valid_sampler = SubsetRandomSampler(train_idx), SubsetRandomSampler(valid_idx)
+        train_sampler, valid_sampler = SubsetRandomSampler(train_idx), SequentialSampler(valid_idx)
+
+        if num_workers==0:
+            persist_workers = False
+        else:
+            persist_workers=True
 
         # Note without persistent_workers=True, cost to restart new threads to do loading is brutal.
-        train_loader = DataLoader(trainset, batch_size=batch_size, sampler=train_sampler, generator=g, num_workers=num_workers, persistent_workers=True, pin_memory=True)
-        valid_loader = DataLoader(trainset, batch_size=batch_size, sampler=valid_sampler, generator=g, num_workers=num_workers, persistent_workers=True, pin_memory=True)
+        train_loader = DataLoader(trainset, batch_size=batch_size, sampler=train_sampler, generator=g, num_workers=num_workers, persistent_workers=persist_workers, pin_memory=True)
+        valid_loader = DataLoader(trainset, batch_size=batch_size, sampler=valid_sampler, num_workers=num_workers, persistent_workers=persist_workers, pin_memory=True)
     else:
         train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=shuffle, generator=g, num_workers=num_workers, persistent_workers=True, pin_memory=True)
         valid_loader = None
@@ -272,15 +277,12 @@ def load_trainloader(trainset, batch_size=64, num_workers=0,shuffle=True, valid_
     return train_loader, valid_loader
 
 
-def load_testloader(testset, batch_size=64, num_workers=0, shuffle=False, seed=0, persistent_workers=False):
-    g = torch.Generator()
-    g.manual_seed(seed)
+def load_testloader(testset, batch_size=64, num_workers=0, shuffle=False, persistent_workers=False):
 
     test_loader = DataLoader(
         testset,
         batch_size=batch_size,
         shuffle=shuffle,
-        generator=g,
         num_workers=num_workers,
         persistent_workers=persistent_workers
     )
