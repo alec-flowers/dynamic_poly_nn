@@ -7,7 +7,7 @@ from torch import optim
 import yaml
 from torch.utils.tensorboard import SummaryWriter
 import datetime
-from utils import path_exist, count_parameters, load_checkpoint, REPO_ROOT, CONFIGS_PATH, save_checkpoint, load_model, set_seed, init_weights, create_logger
+from utils import path_exist, count_parameters, load_checkpoint, REPO_ROOT, CONFIGS_PATH, save_checkpoint, load_model, set_seed, init_weights, create_logger, save_pickle_append
 import time
 import logging
 
@@ -44,7 +44,7 @@ def run(args):
     # Create all paths we will need
     custom_save = config["custom_save"]
     path_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    folders_for_save = f"logs/{config['dataset']['name']}/{config['model']['name']}_{custom_save}_{path_time}"
+    folders_for_save = f"scratch/logs/{config['dataset']['name']}/{config['model']['name']}_{custom_save}_{path_time}"
     savepath = f"{curdir}/{folders_for_save}"
     path_exist(savepath)
 
@@ -66,7 +66,6 @@ def run(args):
         **config["dataloader"]
     )
 
-    #TODO may need to change this with RESNET
     logging.info(f"Length of iters per epoch: {len(train_loader)}. Length of valid batches: {len(valid_loader)}. Size of img: {train_loader.dataset[0][0].shape}")
     sample_shape = train_loader.dataset[0][0].shape
     assert(sample_shape[1] == sample_shape[2]), "Image is not square, but only use one side"
@@ -88,10 +87,10 @@ def run(args):
     deg = config['model']['args'].get('n_degree', config['model']['args'].get('num_blocks', None))
     logging.info(f"Degree: {deg} Num Parameters: {num_params}")
 
-    # `define the optimizer.
+    # define the optimizer.
     decay = config['training_info'].get('weight_dec', 5e-4)
-    opt = optim.SGD(net.parameters(), lr=config['training_info']['lr'],
-                    momentum=0.9, weight_decay=decay)
+    opt = optim.SGD(net.parameters(), momentum=0.9,
+                    lr=config['training_info']['lr'], weight_decay=decay)
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     logging.info(f"Running on: {device}")
@@ -108,30 +107,37 @@ def run(args):
     criterion = torch.nn.CrossEntropyLoss().to(device)
     net.to(device)
 
-    mil = config['training_info'].get('lr_milestones', [40, 60, 80, 100])
-    gamma = config['training_info'].get('lr_gamma', 0.1)
-    # TODO May be something finicky here when loading a model and training.
-    scheduler = optim.lr_scheduler.MultiStepLR(opt, milestones=mil,
-                                               gamma=gamma, last_epoch=start_epoch)
+    # mil = config['training_info'].get('lr_milestones', [40, 60, 80, 100])
+    # gamma = config['training_info'].get('lr_gamma', 0.1)
+    # # TODO May be something finicky here when loading a model and training.
+    # scheduler = optim.lr_scheduler.MultiStepLR(opt, milestones=mil,
+    #                                            gamma=gamma, last_epoch=start_epoch)
+    scheduler = getattr(optim.lr_scheduler, config['lr_scheduler'])(optimizer=opt, **config['learning_rate'])
+
     writer = SummaryWriter(savepath)
 
     start_time = time.time()
     old_acc = 0
     for epoch in range(start_epoch+1, config['training_info']['epochs']+1):
-        train(net, train_loader, opt, criterion, epoch, device, writer, display_interval=config['training_info']['display_interval'])
+        train(net, train_loader, opt, criterion, epoch, device, writer, scheduler=scheduler,
+              display_interval=config['training_info']['display_interval'])
 
-        if epoch % config['training_info']['save_every_epoch'] == 0 and epoch > 0:
+        save_every = config['training_info']['save_every_epoch']
+        if epoch % (save_every * (epoch//save_every + 1) - 1) == 0 and epoch > 0:
             elapsed_time = time.time()-start_time
             save_checkpoint(net, opt, epoch, elapsed_time, savepath, f"latest_e{epoch}_t{elapsed_time:.0f}")
 
         if epoch % config['training_info']['test_every_epoch'] == 0:
-            acc = test(net, valid_loader, criterion, epoch, device, writer)
+            acc, predicted_list, label_list = test(net, valid_loader, criterion, epoch, device, writer)
+
+            # if epoch == start_epoch + 1:
+            #     save_pickle_append({'correct': label_list}, savepath, 'valid_accuracy_list.pkl')
+            # save_pickle_append({epoch: predicted_list}, savepath, 'valid_accuracy_list.pkl')
             if acc > old_acc:
                 old_acc = acc
                 elapsed_time = time.time() - start_time
                 save_checkpoint(net, opt, epoch, elapsed_time, savepath, f"best_model")
 
-        scheduler.step()
 
     writer.flush()
     total_time = time.time() - start_time
