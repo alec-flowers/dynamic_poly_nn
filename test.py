@@ -10,7 +10,7 @@ import numpy as np
 from networks import nets
 from load_data import load_dataset, load_testloader
 from runner import test_to_analyze
-from plots import plot_confusion_matrix, plot_image_grid, per_class_accuracy
+from plots import plot_confusion_matrix, plot_image_grid, per_class_accuracy, plot_per_class_accuracy
 from utils import get_activation, load_model, load_yaml, SCRATCH_PATH
 
 
@@ -51,9 +51,17 @@ def compare_n_nets_by_sample(paths, configs, **kwargs):
         checkpoint_list.append(torch.load(paths[i], map_location=device))
         config_list.append(load_yaml(configs[i]))
 
+    for k, v in kwargs.items():
+        for config in config_list:
+            if k in config['dataset']:
+                config['dataset'][k] = v
+            else:
+                print(f"{k} not in config/dataset, no change occured")
+
     y_pred_list = []
     y_true_list = []
     for i in range(len(checkpoint_list)):
+        print(f"File: {paths[i].split(os.sep)[-2]}")
         y_pred, y_true, labels, dataset = test_net(checkpoint_list[i], config_list[i], **kwargs)
         y_pred_list.append(y_pred)
         y_true_list.append(y_true)
@@ -61,9 +69,6 @@ def compare_n_nets_by_sample(paths, configs, **kwargs):
     assert all(len(set(val)) == 1 for val in zip(*y_true_list))
 
     return dataset, y_true, y_pred_list
-
-    # goal is when having multiple networks (potential ensemble) understand who is getting what
-    # and how well they are doing
 
 
 def difference_when_wrong(y_pred_1, y_pred_2, y_true):
@@ -155,7 +160,6 @@ def test_net(checkpoint, config, register=[], activation=None, **kwargs):
         batch_size=config['dataloader']['batch_size'],
         num_workers=0,
         shuffle=False,
-        seed=0,
     )
 
     sample_shape = test_loader.dataset[0][0].shape
@@ -193,6 +197,7 @@ def test_net(checkpoint, config, register=[], activation=None, **kwargs):
     labels = test_loader.dataset.class_to_idx.keys()
 
     per_class_acc, avg_acc = per_class_accuracy(y_true, y_pred)
+    plot_per_class_accuracy(y_true, y_pred, labels)
     print(f"Average Accuracy: {avg_acc:0.2f} \nPer Class Accuracy: {per_class_acc}")
 
 
@@ -202,14 +207,16 @@ def test_net(checkpoint, config, register=[], activation=None, **kwargs):
 if __name__ == '__main__':
     paths = list(filter(
         lambda x: not re.search('xxxx', x),
-        glob.glob(f"{SCRATCH_PATH}/logs/CIFAR10/*poly*/best_model", recursive=True)
+        glob.glob(f"{SCRATCH_PATH}/logs/CIFAR10/*low*/best_model", recursive=True)
     ))
     print(paths)
 
     configs = list(filter(
         lambda x: not re.search('xxxx', x),
-        glob.glob(f"{SCRATCH_PATH}/logs/CIFAR10/*poly*/r_resnet_pi-net.yml", recursive=True)
+        glob.glob(f"{SCRATCH_PATH}/logs/CIFAR10/*low*/r_ccp*", recursive=True)
     ))
     print(configs)
 
-    compare_two_nets_by_sample(paths[0], paths[1], configs[0], configs[1])
+    dataset, y_true, y_pred = compare_n_nets_by_sample(paths, configs, apply_manipulation=None,)
+    correct_ind = diff_when_wrong_many(y_true, *y_pred)
+    b
