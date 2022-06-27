@@ -8,7 +8,7 @@
 #SBATCH --nodes 1
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 1
-#SBATCH --time 00:05:00
+#SBATCH --time 00:20:00
 
 echo STARTING AT `date`
 
@@ -16,7 +16,7 @@ module purge
 module load gcc/8.4.0 python/3.7.7
 source /home/flowers/venvs/dpolynn_venv/bin/activate
 
-python3 /home/flowers/dynamic_poly_nn/run.py --config_name resnet_default.yml
+python3 /home/flowers/dynamic_poly_nn/run.py --config_name "ensemble_run/ncp_low.yml"
 
 deactivate
 
