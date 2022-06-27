@@ -110,7 +110,7 @@ Cancel a job.
 Useful Bash Commands
 --------------------
 Having a working knowledge of bash commands will be very useful as you can only interact with the server through the command line.
-Here is a `cheatsheet https://github.com/RehanSaeed/Bash-Cheat-Sheet`_ I used to remind myself of commands.
+Here is a `cheatsheet <https://github.com/RehanSaeed/Bash-Cheat-Sheet>`_ I used to remind myself of commands.
 A few useful commands I found myself using were:
 
 .. code-block:: console
