@@ -88,11 +88,11 @@ def prepare_images(dataset, indices, *args, unorm=None):
         title = ''
         for j, model in enumerate(args):
             title = title + f"m{j}: {model[i]} "
-        label_list.append(f"Act: {mapping[label]} "+title)
+        label_list.append(f"{mapping[label]} "+title)
     return img_list, label_list, mapping
 
 
-def plot_image_grid(images, title: str = "", subplot_title: list =[]):
+def plot_image_grid(images, title: str = "", subplot_title: list =[], save=False):
     # images must be ready to be plotted by plt, that means (M, N, Channels)
     n_images = len(images)
     plt.figure(figsize=(math.ceil(np.sqrt(n_images))*5, math.ceil(np.sqrt(n_images))*5))
@@ -103,7 +103,7 @@ def plot_image_grid(images, title: str = "", subplot_title: list =[]):
                 math.ceil(np.sqrt(n_images)),
                 math.ceil(np.sqrt(n_images)),
                 i + 1,
-            ).set_title(f"{subplot_title[i]}", fontsize=16, color='orange')
+            ).set_title(f"{subplot_title[i]}", fontsize=16, color='black')
         else:
             plt.subplot(math.ceil(np.sqrt(n_images)), math.ceil(np.sqrt(n_images)), i + 1,)
         plt.xticks([])
@@ -112,6 +112,8 @@ def plot_image_grid(images, title: str = "", subplot_title: list =[]):
         plt.imshow(image, cmap='gray')
     plt.tight_layout()
     plt.suptitle(title, size=16)
+    if save:
+        plt.savefig("plot_img_grid.png")
     plt.show()
 
 def plot_one(img):
