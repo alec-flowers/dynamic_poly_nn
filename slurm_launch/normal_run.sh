@@ -3,7 +3,7 @@
 #SBATCH --job-name=poly_run
 #SBATCH --chdir /scratch/flowers/
 #SBATCH --nodes 1
-#SBATCH --time 02:00:00
+#SBATCH --time 01:00:00
 #SBATCH --ntasks 8
 #SBATCH --mem-per-cpu=16G
 
@@ -13,12 +13,13 @@ module purge
 module load gcc/8.4.0 python/3.7.7
 source /home/flowers/venvs/fidis_dpnn_venv/bin/activate
 
-INPUT="/home/flowers/dynamic_poly_nn/configs/spectral_runs"
+RUN_FILE="agree_runs"
+INPUT="/home/flowers/dynamic_poly_nn/configs/${RUN_FILE}"
 i=1
 for file in $(ls ${INPUT})
 do
   echo "Triggering processing for ${file}"
-  COMMAND="python3 /home/flowers/dynamic_poly_nn/run.py --config_name spectral_runs/${file}"
+  COMMAND="python3 /home/flowers/dynamic_poly_nn/run.py --config_name ${RUN_FILE}/${file}"
   OUTPUT_FILE="slurm-${SLURM_JOB_ID}.${i}.${file}.out"
 
   srun --exclusive --ntasks 1 ${COMMAND} > ${OUTPUT_FILE} 2>&1 &
