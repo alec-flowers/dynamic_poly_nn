@@ -137,5 +137,9 @@ dmypy.json
 /models
 test.ipynb
 /logs/
-/scratch
+/scratch/logs/*
+!/scratch/logs/ensemble
+!/scratch/logs/FashionMNIST
+!/scratch/logs/CIFAR10
+
 .DS_Store

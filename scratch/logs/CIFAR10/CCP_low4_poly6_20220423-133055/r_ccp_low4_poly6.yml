@@ -1,0 +1,31 @@
+checkpoint: null
+custom_save: low4_poly6
+dataloader:
+  batch_size: 100
+  num_workers: 2
+  shuffle: true
+  subset: false
+  valid_ratio: 0.2
+dataset:
+  apply_manipulation: FrequencyDataset
+  binary_class: null
+  color: null
+  how: low
+  ind_to_keep: null
+  name: CIFAR10
+  r: 4
+  root: .data
+model:
+  args:
+    hidden_size: 16
+    n_degree: 6
+  fn: networks.nets
+  name: CCP
+seed: 0
+training_info:
+  display_interval: 200
+  epochs: 100
+  lr: 0.0001
+  save_every_epoch: 50
+  test_every_epoch: 5
+  weight_dec: 0

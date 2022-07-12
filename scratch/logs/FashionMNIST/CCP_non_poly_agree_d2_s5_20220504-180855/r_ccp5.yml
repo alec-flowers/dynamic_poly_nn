@@ -1,0 +1,31 @@
+checkpoint: null
+custom_save: agree_d2_s5
+dataloader:
+  batch_size: 100
+  num_workers: 2
+  shuffle: true
+  subset: false
+  valid_ratio: 0.2
+dataset:
+  apply_manipulation: null
+  binary_class: null
+  color: null
+  how: null
+  ind_to_keep: null
+  name: FashionMNIST
+  r: null
+  root: .data
+model:
+  args:
+    hidden_size: 16
+    n_degree: 2
+  fn: networks.nets
+  name: CCP_non_poly
+seed: 5
+training_info:
+  display_interval: 200
+  epochs: 25
+  lr: 0.001
+  save_every_epoch: 50
+  test_every_epoch: 1
+  weight_dec: 0

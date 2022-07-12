@@ -1,0 +1,53 @@
+checkpoint: null
+comment: 21/10/2020; fixed according to the cvpr paper (pi-net); equivalent of resnet18.
+custom_save: 2to4_polynet
+dataloader:
+  batch_size: 128
+  num_workers: 2
+  shuffle: true
+  subset: false
+  valid_ratio: 0.2
+dataset:
+  apply_manipulation: null
+  binary_class: null
+  color: null
+  ind_to_keep: null
+  name: CIFAR10
+  root: /tmp/
+model:
+  args:
+    div_std: 0
+    n_channels:
+    - 32
+    - 64
+    - 128
+    - 128
+    n_lconvs: 2
+    n_xconvs: 0
+    norm_local: 1
+    norm_x: -1
+    num_blocks:
+    - 1
+    - 1
+    - 1
+    - 1
+    train: true
+    use_alpha: true
+    use_lactiv: true
+    use_only_first_conv: true
+    what_lactiv: 2
+  fn: networks.resnet_pi_net
+  name: ResNetnew
+seed: 0
+training_info:
+  display_interval: 100
+  epochs: 81
+  lr: 0.1
+  lr_gamma: 0.1
+  lr_milestones:
+  - 40
+  - 60
+  - 80
+  - 100
+  save_every_epoch: 40
+  test_every_epoch: 5
