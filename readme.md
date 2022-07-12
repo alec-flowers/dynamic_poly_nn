@@ -1,9 +1,9 @@
 # Dynamic Degree Polynomial Neural Network
 
-Project Report can be read here.
+The [Project Report](/paper/Dynamic_Poly_NN.pdf).
 
 Outputs of tests are saved in the scratch folder.
-To see and run plots from the paper, can open and run the plotting.ipynb jupyter notebook. 
+To see and run plots from the paper, can open and run the [plotting.ipynb](/plotting.ipynb) jupyter notebook. 
 This will load data saved in the scratch folder and plot it. 
 
 **To train a model the steps are:**
@@ -22,8 +22,8 @@ Read the documentation regarding [how to use Scitas (EPFL HPC cluster)](/scitas_
 
 **To train a model using Scitas the steps are:**
 1) Read my [documentation](/scitas_guide.rst) and set up files on the SCITAS cluster
-2) Set up a bash script. For [examples](slurm_launch):
+2) Set up a bash script. For [examples](slurm_launch) see my repo. The following need to be specified in the bash script:
    1) SCITAS Cluster Parameters
-   2) Loads appropriate environment packages (Interpreter, Python, Packages)
+   2) Load appropriate environment packages (Interpreter, Python, Packages)
    3) Runs appropriate python file
-3) Run bash script by using slurm command `sbatch <PATH TO BASH SCRIPT>`
+4) Run bash script by using slurm command `sbatch <PATH TO BASH SCRIPT>`
